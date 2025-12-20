@@ -8,19 +8,17 @@
 #include "Maths.h"
 #include "Network.h"
 
-using namespace std;
-
 // Training configuration structure
 struct TrainConfig {
 	unsigned int random_seed;
 	unsigned int epochs;
-	double learning_rate;
+	double       learning_rate;
 	unsigned int batch_size;
 	unsigned int hidden_size;
-	unsigned int threads = 1;
+	unsigned int threads  = 1;
 	unsigned int tasks = 1;
 
-	string str() const {
+	std::string str() const {
 		std::ostringstream oss;
 		oss << "seed" << random_seed
 		    << "-epochs" << epochs
@@ -34,7 +32,9 @@ struct TrainConfig {
 };
 
 // Function to train the model
-void train_model(Network& model, const vector<Sample> data, const TrainConfig& config);
+void train_model(Network &model, const std::vector<Sample> data, const TrainConfig &config);
 
 // Function to evaluate the model
-void evaluate_model(Network& model, const vector<Sample>& data, std::vector<int>* predictions = nullptr);
+void evaluate_model(Network &model, const std::vector<Sample> &data, std::vector<int> *predictions = nullptr);
+
+void evaluate_model_real(Network &model, const std::vector<Sample> &data, std::vector<int> *predictions = nullptr);
