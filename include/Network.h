@@ -2,53 +2,81 @@
 
 #include "DataLoader.h"
 #include "Maths.h"
+#include "Vector.h"
+#include "Matrix.h"
 #include <algorithm>
 #include <cmath>
 #include <random>
 #include <string>
 #include <vector>
-
-using namespace std;
+#include <cstddef>
 
 class Network {
   public:
 	// Fashion-MNIST dimensions
-	static constexpr const int INPUT_SIZE = 784;
+	static constexpr const int INPUT_SIZE  = 784;
 	static constexpr const int OUTPUT_SIZE = 10;
 
-	Network(int hidden_size, unsigned int seed);
+	Network(unsigned int hidden_size, unsigned int seed);
 	~Network();
 
 	// inference
-	vector<float> forward(const std::vector<float>& input);
-	int predict(const std::vector<float>& input);
+	Vector forward(const Vector &input);
+	int predict(const Vector &input);
+	int predict(const std::vector<float> &input);
 
 	// training
-	void backpropagate(const vector<float>& target, double learning_rate);
+	void backpropagate(const Vector &target, double learning_rate);
 
 	// Getters
-	const vector<vector<vector<float>>>& get_weights() const {
+	const std::vector<Matrix> &get_weights() const {
 		return weights;
 	}
-	const vector<vector<float>>& get_bias() const {
+	const std::vector<Vector> &get_bias() const {
 		return bias;
 	}
 
-	void save_weights(const std::string& path) const;
+	void save_weights(const std::string &path) const;
+
+	// DO NOT USE OUTSIDE OF THE TESTING ENVIRONMENT
+	struct state { 
+		Network& network;
+		void (Network::* func_xavier)(Matrix&, int, int);
+		const unsigned int& hidden_size;
+		const unsigned int& random_seed;
+		const std::vector<Matrix>& weights;
+		const std::vector<Vector>& bias;
+		const Vector& last_input;
+		const Vector& last_x1;
+		const Vector& last_x2;
+		const Vector& last_x3;
+		const Vector& last_x4;
+		const Vector& last_x5;
+		const Vector& last_output;
+	};
+	// DO NOT IMPLEMENT OR USE OUTSIDE OF THE TESTING ENVIRONMENT
+	friend state smuggle(Network& net);
+	// the above ^^^^^ function is not implemented in the main project. This means
+	// that any attempt to use them will result in a linker error. THIS IS CORRECT.
+	// using this function and its associated struct means you accept that the risks
+	// of completely breaking public/private encapsulation. For this, reason, it is
+	// only acceptable to use this in tests, where private member variables and
+	// functions are needed to test the class.
+
 
   private:
-	void xavier_initialization(vector<vector<float>>& W, int in_dim, int out_dim);
-	int hidden_size;
+	void xavier_initialization(Matrix &W, int in_dim, int out_dim);
+	unsigned int hidden_size;
 	unsigned int random_seed;
-	vector<vector<vector<float>>> weights;
-	vector<vector<float>> bias;
+	std::vector<Matrix> weights;
+	std::vector<Vector> bias;
 
 	// Intermediary variables for backpropagation
-	vector<float> last_input;
-	vector<float> last_x1;
-	vector<float> last_x2;
-	vector<float> last_x3;
-	vector<float> last_x4;
-	vector<float> last_x5;
-	vector<float> last_output;
+	Vector last_input;
+	Vector last_x1;
+	Vector last_x2;
+	Vector last_x3;
+	Vector last_x4;
+	Vector last_x5;
+	Vector last_output;
 };

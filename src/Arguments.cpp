@@ -4,10 +4,8 @@
 #include <stdexcept>
 #include <string>
 
-using namespace std;
-
-static void print_usage(const char* prog) {
-	cout << "Usage: " << prog << " [options]\n"
+static void print_usage(const char *prog) {
+	std::cout << "Usage: " << prog << " [options]\n"
 	     << "Options:\n"
 	     << "  -s, --random_seed <num>    Random seed (unsigned int).\n"
 	     << "  -e, --epochs <n>           Number of epochs.\n"
@@ -19,12 +17,12 @@ static void print_usage(const char* prog) {
 	     << "  -h, --help                 Show this help message\n";
 }
 
-TrainConfig parse_arguments(int argc, char* argv[]) {
+TrainConfig parse_arguments(int argc, char *argv[]) {
 	TrainConfig out;
-	bool has_seed = false;
+	bool has_seed   = false;
 	bool has_epochs = false;
-	bool has_lr = false;
-	bool has_batch = false;
+	bool has_lr     = false;
+	bool has_batch  = false;
 	bool has_hidden = false;
 
 	for (int i = 1; i < argc; ++i) {
@@ -32,7 +30,7 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 		try {
 			if (a == "-s" || a == "--random_seed") {
 				if (i + 1 < argc) {
-					out.random_seed = static_cast<unsigned int>(stoul(argv[++i]));
+					out.random_seed = static_cast<unsigned int>(std::stoul(argv[++i]));
 					has_seed = true;
 				} else {
 					print_usage(argv[0]);
@@ -40,7 +38,7 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				}
 			} else if (a == "-e" || a == "--epochs") {
 				if (i + 1 < argc) {
-					out.epochs = stoi(argv[++i]);
+					out.epochs = std::stoi(argv[++i]);
 					has_epochs = true;
 				} else {
 					print_usage(argv[0]);
@@ -48,7 +46,7 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				}
 			} else if (a == "-l" || a == "--learning_rate") {
 				if (i + 1 < argc) {
-					out.learning_rate = stod(argv[++i]);
+					out.learning_rate = std::stod(argv[++i]);
 					has_lr = true;
 				} else {
 					print_usage(argv[0]);
@@ -56,7 +54,7 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				}
 			} else if (a == "-b" || a == "--batch_size") {
 				if (i + 1 < argc) {
-					out.batch_size = stoi(argv[++i]);
+					out.batch_size = std::stoi(argv[++i]);
 					has_batch = true;
 				} else {
 					print_usage(argv[0]);
@@ -64,7 +62,7 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				}
 			} else if (a == "-z" || a == "--hidden_size") {
 				if (i + 1 < argc) {
-					out.hidden_size = stoi(argv[++i]);
+					out.hidden_size = std::stoi(argv[++i]);
 					has_hidden = true;
 				} else {
 					print_usage(argv[0]);
@@ -72,14 +70,14 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				}
 			} else if (a == "--threads") {
 				if (i + 1 < argc) {
-					out.threads = static_cast<unsigned int>(stoul(argv[++i]));
+					out.threads = static_cast<unsigned int>(std::stoul(argv[++i]));
 				} else {
 					print_usage(argv[0]);
 					throw std::runtime_error("Missing value for --threads");
 				}
 			} else if (a == "--tasks") {
 				if (i + 1 < argc) {
-					out.tasks = static_cast<unsigned int>(stoul(argv[++i]));
+					out.tasks = static_cast<unsigned int>(std::stoul(argv[++i]));
 				} else {
 					print_usage(argv[0]);
 					throw std::runtime_error("Missing value for --tasks");
@@ -91,10 +89,10 @@ TrainConfig parse_arguments(int argc, char* argv[]) {
 				print_usage(argv[0]);
 				throw std::runtime_error(std::string("Unknown argument: ") + a);
 			}
-		} catch (const std::invalid_argument& e) {
+		} catch (const std::invalid_argument &e) {
 			print_usage(argv[0]);
 			throw std::runtime_error(std::string("Invalid numeric value for argument ") + a);
-		} catch (const std::out_of_range& e) {
+		} catch (const std::out_of_range &e) {
 			print_usage(argv[0]);
 			throw std::runtime_error(std::string("Numeric value out of range for argument ") + a);
 		}

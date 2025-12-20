@@ -34,7 +34,7 @@ elif [ "$1" == "test" ]; then
     cmake -S . -B build/test -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-O0";
     cmake --build build/test --target tests -j12;
 elif [ "$1" == "bench" ]; then
-    if [ ! -d build/bench ]; then mkdir build/main/bench; fi
+    if [ ! -d build/bench ]; then mkdir build/bench; fi
     cmake -S . -B build/bench -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-O0";
     cmake --build build/bench --target accuracy -j12;
 else
