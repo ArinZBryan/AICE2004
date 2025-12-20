@@ -1,0 +1,275 @@
+% Created 2025-11-14 Fri 09:45
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\graphicspath{ {./img/} }
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage[hidelinks]{hyperref}
+\usepackage[margin=2cm]{geometry}
+\usepackage{csquotes}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage[sorting=none]{biblatex}
+\usepackage{datetime}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{booktabs}
+
+% \date{\monthyeardate\today}
+\title{AICE2004 Coursework Specification}
+
+% \setlength{\parskip}{0em}
+\makeatletter
+\hypersetup{
+ pdfauthor=\@author,
+ pdftitle=\@title,
+ pdfkeywords={},
+ pdfsubject={},
+ pdflang={English}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:intro}
+\begin{itemize}
+\item In this coursework, students are receive an unoptimised neural network written in pure C++, and improve it with optimisation, parallelisation and distribution using OpenMP, MPI and SLURM.
+\item Students receive two code repositories
+\begin{itemize}
+\item \texttt{coursework}: Containing the neural network in C++.
+\item \texttt{marking}: Containing the testing framework that guides the student and represents the quantitative part of the assessment.
+\end{itemize}
+\item This document outlines the procedures a student is expected to take to finish the coursework and the associated marking criteria alongside.
+\end{itemize}
+
+
+
+\newpage
+\section{Problem Description}
+\label{sec:problem}
+The overall goal for this coursework is to take an unoptimised program that trains a 3-layer neural network, and improve its execution time via the material taught in the course.
+This program is then tested using the "Testing" program, which builds, runs and evaluates the program according to the Quantitative section of the mark scheme.
+
+\subsection{The Neural Network (NN) Program}
+\label{sec:nn}
+Repository: \url{https://git.soton.ac.uk/aice2004/coursework}
+
+This repository contains a C++11 program that:
+\begin{enumerate}
+\item Trains a neural network using the Fashion-MNIST training dataset.
+\item Evaluates the accuracy of trained network using the Fashion-MNIST testing dataset.
+\item Saves the predictions of the testing dataset to the filesystem, which is then evaluated by the "Testing" program.
+\end{enumerate}
+
+Students should take this program and 1. \textbf{optimise} the \emph{code}, 2. \textbf{parallelise} it across multiple \emph{threads} and 3. \textbf{distribute} across multiple \emph{tasks}.
+The neural network:
+\begin{itemize}
+\item Is unoptimised (simple code, single-threaded, all in one task).
+\item Has 784 input neurons.
+\item Parametrizable amounts of hidden neurons (with parameter \texttt{-z})
+\item 10 output neurons representing the classes of the Fashion-MNIST dataset.
+\end{itemize}
+
+The program accepts a set of arguments that represent the neural network's hyperparameters.
+These hyperparameters describe the network structure, how it is trained, and how it is executed on the hardware.
+The available hyperparameters (arguments) are:
+\begin{itemize}
+\item Random Seed (e.g. \texttt{-s 42})
+\item Epochs (\texttt{-e 10})
+\item Learning Rate (\texttt{-l 0.001})
+\item Batch Size (\texttt{-b 32})
+\item Hidden Layer Size (\texttt{-z 100})
+\item Threads per task (\texttt{-{}-{}threads 1})
+\item Tasks (\texttt{-{}-{}tasks 4})
+\end{itemize}
+
+Instructions on getting started with this code are located in the \texttt{README.md} file at the root of this repository.
+
+Students are provided the "Contract" (Section \ref{sec:contract}) of this document to ensure that the C++ program complies with the assumptions of the Testing one.
+\subsection{The Testing Program}
+\label{sec:testing}
+Repository: \url{https://git.soton.ac.uk/aice2004/marking}
+
+This repository contains the program that will determine the mark of each student according to the "Quantitative" section of the Marking scheme.
+There are two versions of this program:
+\begin{enumerate}
+\item Internal marking: This is the version we keep to determine Quantitative mark on our end.
+\item External testing: This is the version students get to iteratively solve this coursework.
+\end{enumerate}
+
+The program contains hyperparameter sets, which are combinations of arguments supplied to the program, such as number of epochs (\texttt{-e}), random seed (\texttt{-s}), or threads (\texttt{--threads}).
+The only difference between the two versions described above are the provided hyperparameter sets, the code remains the same.
+
+Students are expected to follow a \emph{Test-Driven Development} workflow, with the help of this repository.
+This repository contains Python code that goes through these Steps:
+\begin{enumerate}
+\item Builds the program.
+\item Runs the program and collects runtime statistics (execution time, threads and tasks allocated, etc.)
+\item Across the entire provided hyperparameter set, evaluates the program according to the 'Quantitative' mark scheme (Section \ref{sec:quant}).
+\end{enumerate}
+For Steps 1 and 2, information is collected that is used in Step 3, therefore it is \textbf{crucial that you do not change the C++ program's reading/writing logic}.
+
+Students are provided the "Contract" (Section \ref{sec:contract}) of this document to ensure that the C++ program complies with the assumptions of the Testing one.
+
+\newpage
+\section{Marking}
+\label{sec:marking}
+\subsection{Quantitative (60\%)}
+\label{sec:quant}
+The quantitative mark comes from the Testing program (Section \ref{sec:testing}), which follows the mark scheme described below.
+For all internally tested hyper-parameters sets, the following should apply.
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{lXr}
+\toprule
+\textbf{Mark \#} & \textbf{Description} & \textbf{Mark Awarded} \\
+\midrule
+BUILD1 & The program compiles with all provided hyperparameter sets. & 1 \\
+BUILD2 & The run command (\texttt{scripts/run.sh}) uses SLURM to run it. & 2 \\
+\midrule
+RUN1 & The program executes successfully (exit code 0). & 2 \\
+\midrule
+RES1 & The accuracy is within ±5\% of the un-optimised network. & 10 \\
+RES2 & The thread count at runtime is equal to the \texttt{{-}{-}threads} argument. & 10 \\
+RES3 & The task count at runtime is equal to the \texttt{{-}{-}tasks} argument. & 10 \\
+RES4 & (\texttt{{-}{-}threads=1, {-}{-}tasks=1}) execution time sped up by 0.5x\textsuperscript{\textdagger}. & 10 \\
+RES5 & (\texttt{{-}{-}threads=N, {-}{-}tasks=1}) execution time scales linearly ($N \in [1, \infty]$). & 7.5 \\
+RES6 & (\texttt{{-}{-}threads=X, {-}{-}tasks=N}) spawns N MPI processes. & 7.5 \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total}} & \textbf{60} \\
+\bottomrule
+\end{tabularx}
+\medskip
+\small{\textsuperscript{\textdagger} Subject to change, will not become more difficult.}
+\end{table}
+
+\subsection{Qualitative (40\%)}
+\label{sec:qual}
+Students are to submit a maximum 2-page report detailing:
+\begin{enumerate}
+\item Performance issues with the original code.
+\item How they addressed those performance issues with:
+\begin{enumerate}
+\item Optimising the code.
+\item Parallelising with threads.
+\item Distributing with tasks.
+\end{enumerate}
+\item Big O analysis of original \& improved code.
+\end{enumerate}
+
+
+\noindent Mark scheme:
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{lXr}
+\toprule
+\textbf{Mark \#} & \textbf{Description} & \textbf{Total marks} \\
+\midrule
+REP1 & All major problems in unoptimised code have been identified. & 5 \\
+REP2 & Justifications for problems in original program have been well explained. & 5 \\
+REP3 & Big O analysis with 10,000 epochs and 1000 hidden neurons are reasonable and close to internal estimate (based on lectures). & 7.5 \\
+REP4 & Sufficient C++ optimisations identified (according to lectures). & 5 \\
+REP5 & Sufficient thread parallelisations identified (according to lectures). & 5 \\
+REP6 & Sufficient task distribution strategies identified (according to lectures). & 5 \\
+REP7 & Big O analysis of the improved program with 10,000 epochs and 1000 hidden neurons are reasonable (according to lectures). & 7.5 \\
+\midrule
+\multicolumn{2}{r}{\textbf{Total}} & \textbf{40} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\newpage
+\section{Contract}
+\label{sec:contract}
+Students must oblige to the following constraints on the program to ensure that the internal testing utility is able to detect their changes.
+
+\textbf{Note to students}: The default program fits all of these requirements.
+The \texttt{README.md} file in the coursework repository's root contains advice on not breaking this contract.
+
+\begin{enumerate}
+\item script/build.sh
+\begin{enumerate}
+\item This \textbf{MUST}, without any arguments, build the \texttt{build/main} with the provided conda environment.
+\end{enumerate}
+\item build/main
+\begin{enumerate}
+\item This \textbf{MUST} be built by build.sh
+\item \label{it:arg} This \textbf{MUST} take the following arguments:
+\begin{verbatim}
+-s, --random_seed <num>    Random seed (unsigned int).
+-e, --epochs <n>           Number of epochs.
+-l, --learning_rate <f>    Learning rate.
+-b, --batch_size <n>       Batch size.
+-z, --hidden_size <n>      Hidden layer size.
+    --threads <n>          Number of threads per task (default 1).
+    --tasks <n>            Number of tasks (default 1).
+-h, --help                 Show this help message
+\end{verbatim}
+\end{enumerate}
+
+\item script/run.sh
+\begin{enumerate}
+\item This \textbf{MUST} contain the required commands to run `build/main` on Iridis with the above arguments
+\end{enumerate}
+
+\item Outputs (\textbf{MUST})
+\begin{enumerate}
+\item \textbf{MUST} output into 'output' directory of under the project root.
+\item \textbf{MUST} contain the Prediction:
+\item \textbf{MUST} be saved to a directory with this format name:
+\texttt{seed<n>-epochs<n>-lr<f>-batch<n>-hidden<n>-threads<n>-tasks<n>}
+\begin{itemize}
+\item Where \texttt{<n>} is an integer and \texttt{<f>} is a real number that corresponds to the arguments described above.
+\end{itemize}
+\end{enumerate}
+
+\item All internal calculations \textbf{MUST} be at least 32bits (>=float)
+
+\item "The network \textbf{MUST} stay within \textpm{}5\% of accuracy after optimisation"
+\begin{itemize}
+\item Subject to change, it will only be relaxed (not get harder).
+\end{itemize}
+
+\item "To improve the program, you \textbf{MUST} use OpenMP, MPI and SLURM."
+\item "The program \textbf{MUST} compile on Iridis with the provided conda environment."
+\begin{itemize}
+\item With all warnings turned on in the compiler (\texttt{-Wall}), must produce no warnings.
+\item We reserve the right to fix the GCC and C++ version once Iridis X migration has completed.
+\item The CMakeLists.txt file will be changed accordingly.
+\end{itemize}
+\end{enumerate}
+
+\section{Advice}
+\label{sec:advice}
+\begin{itemize}
+\item Remember: this is NOT a neural networks course. You don't have to understand the maths, but only the computations so that you can optimise them.
+\begin{itemize}
+\item Read the neural network crash course in the \texttt{coursework} repository, it gives you a quick oversight on the computations.
+\end{itemize}
+\item To help you optimise your code, you can use profilers (search: linux profiler, also look at the end of Low Level Programming).
+\item You will notice at first that Iridis runs the network slower than even your laptop. This changes quickly once you scale to many more threads and tasks.
+\item If there are bugs or ambiguities, please report them via the issue submission system at \url{https://git.soton.ac.uk/aice2004/coursework/-/issues}.
+\item If you're feeling overwhelmed:
+\begin{enumerate}
+\item You're not alone, and you can talk to other people (just don't share code).
+\item It seems complicated to start with, but it's all just code, and you know how to code.
+\end{enumerate}
+\end{itemize}
+\end{document}
+
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% End:

@@ -1,0 +1,14 @@
+build/
+data/*.csv
+data/*.zip
+output/*
+!output/knowngood*
+docs/specification/specification.aux
+docs/specification/specification.toc
+docs/specification/specification.run.xml
+docs/specification/specification.out
+docs/specification/specification.log
+docs/specification/specification.bcf
+*.pdf
+.vscode/
+

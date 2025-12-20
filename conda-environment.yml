@@ -1,0 +1,17 @@
+name: aice
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - compilers
+  - numpy
+  - clang-format
+  - openmpi
+  - tbb
+  - tbb-devel
+  - sysroot_linux-64
+  - libgcc-ng
+  - libstdcxx-ng
+  - matplotlib
+  - tomli-w
+  - catch2

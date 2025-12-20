@@ -1,0 +1,7 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation        # Use tabs for indentation; spaces for alignment
+AllowShortFunctionsOnASingleLine: Empty
+PointerAlignment: Left
+ColumnLimit: 0               # disable forced line wrapping; set a value if you prefer
