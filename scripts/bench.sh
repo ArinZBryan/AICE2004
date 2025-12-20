@@ -8,11 +8,11 @@ if ! [ -f "CMakeLists.txt" ] || ! grep -q "project(aice-fashion-network)" CMakeL
 fi
 
 # Check if the executable has been produced.
-if ! [ -x build/bench/main ]; then
-    echo "error: executable build/bench/main not produced. Please run scripts/build.sh bench and make sure it produces an executable build/bench/main"
+if ! [ -x build/bench/accuracy ]; then
+    echo "error: executable build/bench/accuracy not produced. Please run scripts/build.sh bench and make sure it produces an executable build/bench/accuracy"
     exit 1
 fi
 
 ##### INSERT RUN INSTRUCTIONS BELOW THIS LINE #####
-mpirun -np 1 build/bench/main
+mpirun -np 1 build/bench/accuracy
 ##### INSERT RUN INSTRUCTIONS ABOVE THIS LINE #####

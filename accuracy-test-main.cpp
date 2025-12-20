@@ -227,14 +227,25 @@ int main() {
         1234,   // random_seed      [DO NOT MODIFY]
         10,     // epochs           [DO NOT MODIFY]
         0.001,  // learning_rate    [DO NOT MODIFY]
-        32,     // batch_size          
+        1,     // batch_size          
         10,     // hidden_size      [DO NOT MODIFY]
         1,      // threads    (known good output only supports threads=1)
         1       // tasks      (known good output only supports tasks=1)
     };
 
-    WeightsFile goalWeightsFile = loadWeights("output/knowngood/weights.bin");
-    std::vector<uint8_t> goalPredictions = loadPredictions("output/knowngood/predictions.bin");
+    std::stringstream knowngoodpathbuilder;
+    knowngoodpathbuilder << "output/knowngood";
+    knowngoodpathbuilder << "-s" << config.random_seed;
+    knowngoodpathbuilder << "-e" << config.epochs;
+    knowngoodpathbuilder << "-l" << config.learning_rate;
+    knowngoodpathbuilder << "-b" << config.batch_size;
+    knowngoodpathbuilder << "-z" << config.hidden_size;
+    knowngoodpathbuilder << "/";
+
+    std::cout << "Loading known good output from folder: " << knowngoodpathbuilder.str() << std::endl;
+
+    WeightsFile goalWeightsFile = loadWeights(knowngoodpathbuilder.str() + "weights.bin");
+    std::vector<uint8_t> goalPredictions = loadPredictions(knowngoodpathbuilder.str() + "predictions.bin");
 
     // Create DataLoader instance
 	DataLoader loader;
