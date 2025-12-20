@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 26,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "hpc-conda-mpi",
+      "description": "WSL / Conda environment with OpenMPI + TBB",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/main/debug",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",
+        "CMAKE_C_COMPILER": "/home/arinb/miniconda3/envs/aice/bin/mpicc",
+        "CMAKE_CXX_COMPILER": "/home/arinb/miniconda3/envs/aice/bin/mpicxx",
+        "CMAKE_PREFIX_PATH": "/home/arinb/miniconda3/envs/aice"
+      },
+      "environment": {
+        "PATH": "/home/arinb/miniconda3/envs/aice/bin:/usr/local/bin:/usr/bin:/bin",
+        "LD_LIBRARY_PATH": "/home/arinb/miniconda3/envs/aice/lib:/usr/local/lib:/usr/lib"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "hpc-build",
+      "configurePreset": "hpc-conda-mpi",
+      "description": "Build using the conda+MPI preset",
+      "jobs": 8
+    }
+  ]
+}
