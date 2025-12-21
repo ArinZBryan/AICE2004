@@ -396,13 +396,13 @@ TEST_CASE("forward", "[Network.cpp]") {
         nnv(i) = dist(gen);
     }
 
-    std::vector<float> onv = nnv;
+    std::vector<float> onv = to_float_vector(nnv);
     std::vector<float> onr = on.forward(onv);
-    Vector nnr = nn.forward(nnv);
+    std::vector<float> nnr = to_float_vector(nn.forward(nnv));
 
     REQUIRE(nnr.size() == onr.size());
     for (size_t j = 0; j < nnr.size(); j++) {
-        REQUIRE_THAT(onr[j], WithinULP(nnr(j), 3));
+        REQUIRE_THAT(onr[j], WithinULP(nnr[j], 3));
     }
 }
 
@@ -419,9 +419,9 @@ TEST_CASE("backpropogate", "[Network.cpp]") {
 
     Vector label_one_hot = Vector(10, 0.0f);
     label_one_hot(0) = 1.0f;
-    on.forward(nnv);
+    on.forward(to_float_vector(nnv));
     nn.forward(nnv);
-	on.backpropagate(label_one_hot, 0.1);
+	on.backpropagate(to_float_vector(label_one_hot), 0.1);
     nn.backpropagate(label_one_hot, 0.1);
 
     Network::state snn = smuggle(nn);
@@ -495,7 +495,7 @@ TEST_CASE("predict", "[Network.cpp]") {
         nnv(i) = dist(gen);
     }
 
-    std::vector<float> onv = nnv;
+    std::vector<float> onv = to_float_vector(nnv);
 
     int onr = on.predict(onv);
     int nnr = nn.predict(nnv);

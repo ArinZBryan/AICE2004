@@ -49,6 +49,16 @@ std::vector<uint8_t> loadPredictions(std::string path) {
     return preds;
 }
 
+std::vector<float> loadLossCurve(std::string path) {
+    std::ifstream fs = std::ifstream(path);
+    std::vector<float> out;
+    std::string line;
+    while (std::getline(fs, line)) {
+        out.push_back(std::stof(line));
+    }
+    return out;
+}
+
 float predictionsAccuracy(std::vector<uint8_t> goal, std::vector<uint8_t> actual) {
     int correct = 0;
     int incorrect = 0;
@@ -63,160 +73,18 @@ float predictionsAccuracy(std::vector<uint8_t> goal, std::vector<uint8_t> actual
     return static_cast<float>(correct) / static_cast<float>(incorrect + correct);
 }
 
-std::tuple<float, float, float> weightsAccuracy(WeightsFile goal, WeightsFile actual, float threshold_absolute) {
-    int correct = 0;
-    int incorrect = 0;
-    std::tuple<float, float, float> res = { 0.0f, 0.0f, 0.0f };
-    if (goal.weight0.cols() != actual.weight0.cols() || goal.weight0.rows() != actual.weight0.rows()) {
-        std::get<0>(res) = -1.0f;
-    } else {
-        int w0correct = 0;
-        int w0incorrect = 0;
-        for (size_t i = 0; i < actual.weight0.rows(); i++) for (size_t j = 0; j < actual.weight0.cols(); j++) {
-            if (std::fabs(actual.weight0(i, j) - goal.weight0(i, j)) < threshold_absolute) { w0correct++; }
-            else { w0incorrect++; }
-        }
-        std::get<0>(res) = static_cast<float>(w0correct) / static_cast<float>(w0correct + w0incorrect);
-        correct += w0correct;
-        incorrect += w0incorrect;
+std::tuple<float, float, float> vecAccuracy(std::vector<float> a, std::vector<float> b) {
+    float min = std::numeric_limits<float>::infinity();
+    float max = -std::numeric_limits<float>::infinity();
+    double acc = 0;
+    for (size_t i = 0; i < a.size(); i++) {
+        number diff = std::abs((a[i] - b[i]) / a[i]);
+        if (diff < min) { min = diff; }
+        if (diff > max) { max = diff; }
+        acc += diff;
     }
-    if (goal.weight1.cols() != actual.weight1.cols() || goal.weight1.rows() != actual.weight1.rows()) {
-        std::get<1>(res) = -1.0f;
-    } else {
-        int w1correct = 0;
-        int w1incorrect = 0;
-        for (size_t i = 0; i < actual.weight1.rows(); i++) for (size_t j = 0; j < actual.weight1.cols(); j++) {
-            if (std::fabs(actual.weight1(i, j) - goal.weight1(i, j)) < threshold_absolute) { w1correct++; }
-            else { w1incorrect++; }
-        }
-        std::get<1>(res) = static_cast<float>(w1correct) / static_cast<float>(w1correct + w1incorrect);
-        correct += w1correct;
-        incorrect += w1incorrect;
-    }
-    if (std::get<0>(res) == -1.0f || std::get<1>(res) == -1.0f) {
-        std::get<2>(res) = -1.0f;
-    } else {
-        std::get<2>(res) = static_cast<float>(correct) / static_cast<float>(correct + incorrect);
-    }
-    return res;
+    return {min, acc / a.size(), max};
 }
-
-std::tuple<float, float, float> biasesAccuracy(WeightsFile goal, WeightsFile actual, float threshold_absolute) {
-    int correct = 0;
-    int incorrect = 0;
-    std::tuple<float, float, float> res = { 0.0f, 0.0f, 0.0f };
-    if (goal.bias0.size() != actual.bias0.size()) {
-        std::get<0>(res) = -1.0f;
-    } else {
-        int w0correct = 0;
-        int w0incorrect = 0;
-        for (size_t i = 0; i < actual.bias0.size(); i++){
-            if (std::fabs(actual.bias0(i) - goal.bias0(i)) < threshold_absolute) { w0correct++; }
-            else { w0incorrect++; }
-        }
-        std::get<0>(res) = static_cast<float>(w0correct) / static_cast<float>(w0correct + w0incorrect);
-        correct += w0correct;
-        incorrect += w0incorrect;
-    }
-    if (goal.bias1.size() != actual.bias1.size()) {
-        std::get<1>(res) = -1.0f;
-    } else {
-        int w1correct = 0;
-        int w1incorrect = 0;
-        for (size_t i = 0; i < actual.bias1.size(); i++){
-            if (std::fabs(actual.bias1(i) - goal.bias1(i)) < threshold_absolute) { w1correct++; }
-            else { w1incorrect++; }
-        }
-        std::get<1>(res) = static_cast<float>(w1correct) / static_cast<float>(w1correct + w1incorrect);
-        correct += w1correct;
-        incorrect += w1incorrect;
-    }
-    if (std::get<0>(res) == -1.0f || std::get<1>(res) == -1.0f) {
-        std::get<2>(res) = -1.0f;
-    } else {
-        std::get<2>(res) = static_cast<float>(correct) / static_cast<float>(correct + incorrect);
-    }
-    return res;    
-}
-
-std::tuple<float, float, float> weightsAccuracyRelative(WeightsFile goal, WeightsFile actual, float threshold_relative) {
-    int correct = 0;
-    int incorrect = 0;
-    float threshold = threshold_relative / 100;
-    std::tuple<float, float, float> res = { 0.0f, 0.0f, 0.0f };
-    if (goal.weight0.cols() != actual.weight0.cols() || goal.weight0.rows() != actual.weight0.rows()) {
-        std::get<0>(res) = -1.0f;
-    } else {
-        int w0correct = 0;
-        int w0incorrect = 0;
-        for (size_t i = 0; i < actual.weight0.rows(); i++) for (size_t j = 0; j < actual.weight0.cols(); j++) {
-            if (std::fabs(actual.weight0(i, j) - goal.weight0(i, j)) < threshold * std::fabs(goal.weight0(i, j))) { w0correct++; }
-            else { w0incorrect++; }
-        }
-        std::get<0>(res) = static_cast<float>(w0correct) / static_cast<float>(w0correct + w0incorrect);
-        correct += w0correct;
-        incorrect += w0incorrect;
-    }
-    if (goal.weight1.cols() != actual.weight1.cols() || goal.weight1.rows() != actual.weight1.rows()) {
-        std::get<1>(res) = -1.0f;
-    } else {
-        int w1correct = 0;
-        int w1incorrect = 0;
-        for (size_t i = 0; i < actual.weight1.rows(); i++) for (size_t j = 0; j < actual.weight1.cols(); j++) {
-            if (std::fabs(actual.weight1(i, j) - goal.weight1(i, j)) < threshold * std::fabs(goal.weight0(i, j))) { w1correct++; }
-            else { w1incorrect++; }
-        }
-        std::get<1>(res) = static_cast<float>(w1correct) / static_cast<float>(w1correct + w1incorrect);
-        correct += w1correct;
-        incorrect += w1incorrect;
-    }
-    if (std::get<0>(res) == -1.0f || std::get<1>(res) == -1.0f) {
-        std::get<2>(res) = -1.0f;
-    } else {
-        std::get<2>(res) = static_cast<float>(correct) / static_cast<float>(correct + incorrect);
-    }
-    return res;
-}
-
-std::tuple<float, float, float> biasesAccuracyRelative(WeightsFile goal, WeightsFile actual, float threshold_relative) {
-    int correct = 0;
-    int incorrect = 0;
-    float threshold = threshold_relative / 100;
-    std::tuple<float, float, float> res = { 0.0f, 0.0f, 0.0f };
-    if (goal.bias0.size() != actual.bias0.size()) {
-        std::get<0>(res) = -1.0f;
-    } else {
-        int w0correct = 0;
-        int w0incorrect = 0;
-        for (size_t i = 0; i < actual.bias0.size(); i++){
-            if (std::fabs(actual.bias0(i) - goal.bias0(i)) < threshold * std::fabs(goal.bias0(i))) { w0correct++; }
-            else { w0incorrect++; }
-        }
-        std::get<0>(res) = static_cast<float>(w0correct) / static_cast<float>(w0correct + w0incorrect);
-        correct += w0correct;
-        incorrect += w0incorrect;
-    }
-    if (goal.bias1.size() != actual.bias1.size()) {
-        std::get<1>(res) = -1.0f;
-    } else {
-        int w1correct = 0;
-        int w1incorrect = 0;
-        for (size_t i = 0; i < actual.bias1.size(); i++){
-            if (std::fabs(actual.bias1(i) - goal.bias1(i)) < threshold * std::fabs(goal.bias1(i))) { w1correct++; }
-            else { w1incorrect++; }
-        }
-        std::get<1>(res) = static_cast<float>(w1correct) / static_cast<float>(w1correct + w1incorrect);
-        correct += w1correct;
-        incorrect += w1incorrect;
-    }
-    if (std::get<0>(res) == -1.0f || std::get<1>(res) == -1.0f) {
-        std::get<2>(res) = -1.0f;
-    } else {
-        std::get<2>(res) = static_cast<float>(correct) / static_cast<float>(correct + incorrect);
-    }
-    return res;    
-}
-
 
 int main() {
     constexpr float WEIGHT_EQUAL_THRESHOLD_PERCENT = 5;  //Specification requires 100% accuracy within an error margin of 5%
@@ -246,21 +114,23 @@ int main() {
 
     WeightsFile goalWeightsFile = loadWeights(knowngoodpathbuilder.str() + "weights.bin");
     std::vector<uint8_t> goalPredictions = loadPredictions(knowngoodpathbuilder.str() + "predictions.bin");
+    std::vector<float> goalLossCurve = loadLossCurve(knowngoodpathbuilder.str() + "losses.txt");
 
     // Create DataLoader instance
 	DataLoader loader;
     const std::vector<Sample> &train_data = loader.get_train_data();
 	const std::vector<Sample> &test_data = loader.get_test_data();
+    
 
 	// Initialise the network with parsed seed and hidden size
 	Network net = Network(config.hidden_size, config.random_seed);
 
     // Train.
-    train_model(net, train_data, config);
+    std::vector<float> actualLossCurve = train_model(net, train_data, config);
     // Print the trained prediction of data[eval_data_index].
     // Store predictions to save as file later.
 	std::vector<int> predictions;
-	evaluate_model_real(net, test_data, &predictions);
+	evaluate_model(net, test_data, &predictions);
 
     std::vector<uint8_t> actualPredictions = std::vector<uint8_t>();
     actualPredictions.reserve(predictions.size());
@@ -281,22 +151,16 @@ int main() {
     };
     
     float predictionAccuracy = predictionsAccuracy(goalPredictions, actualPredictions);
-    std::tuple<float, float, float> weightAccuracy = weightsAccuracyRelative(goalWeightsFile, actualWeightsFile, WEIGHT_EQUAL_THRESHOLD_PERCENT);
-    std::tuple<float, float, float> biasAccuracy = biasesAccuracyRelative(goalWeightsFile, actualWeightsFile, BIAS_EQUAL_THRESHOLD_PERCENT);
+    auto [ lossaccuracymin, lossaccuracyavg, lossaccuracymax ] = vecAccuracy(goalLossCurve, actualLossCurve);
 
     std::stringstream msg;
     
     msg << "=== Output Accuracies ===" << "\n";
     msg << "Prediction Accuracy: " << predictionAccuracy * 100 << "%\n";
-    msg << "Weight Accuracy: \n";
-    msg <<      "\tHidden Layer: " << std::get<0>(weightAccuracy) * 100 << "% (within +/- " << WEIGHT_EQUAL_THRESHOLD_PERCENT << "%)\n";
-    msg <<      "\tOutput Layer: " << std::get<1>(weightAccuracy) * 100 << "% (within +/- " << WEIGHT_EQUAL_THRESHOLD_PERCENT << "%)\n";
-    msg <<      "\tOverall: " << std::get<2>(weightAccuracy) * 100 << "% (within +/- " << WEIGHT_EQUAL_THRESHOLD_PERCENT << "%)\n";
-    msg << "Bias Accuracy: \n";
-    msg <<      "\tHidden Layer: " << std::get<0>(biasAccuracy) * 100 << "% (within +/- " << BIAS_EQUAL_THRESHOLD_PERCENT << "%)\n";
-    msg <<      "\tOutput Layer: " << std::get<1>(biasAccuracy) * 100 << "% (within +/- " << BIAS_EQUAL_THRESHOLD_PERCENT << "%)\n";
-    msg <<      "\tOverall: " << std::get<2>(biasAccuracy) * 100 << "% (within +/- " << BIAS_EQUAL_THRESHOLD_PERCENT << "%)\n";
-
+    msg << "Loss Curve Accuracy:\n";
+    msg <<      "\tMinimum Error: " << lossaccuracymin * 100 << "%\n";
+    msg <<      "\tMaximum Error: " << lossaccuracymax * 100 << "%\n";
+    msg <<      "\tAverage Error: " << lossaccuracyavg * 100 << "%\n";
     std::cout << msg.str();
     return 0;
 }
