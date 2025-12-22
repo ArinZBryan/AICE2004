@@ -3,7 +3,8 @@
 #include "Matrix.h"
 
 
-void train_model(Network &model, std::vector<Sample> data, const TrainConfig &config) {
+std::vector<float> train_model(Network &model, std::vector<Sample> data, const TrainConfig &config) {
+	std::vector<float> cross_entropy_losses;
 	for (unsigned int epoch = 0; epoch < config.epochs; ++epoch) {
 		std::vector<float> cse_epoch(10, 0.0f); // cross-entropy loss for the epoch
 		for (unsigned int i = 0; i < data.size(); i++) {
@@ -14,7 +15,7 @@ void train_model(Network &model, std::vector<Sample> data, const TrainConfig &co
 
 			Vector output = model.forward(sample_data);
 
-			std::vector<float> cse = cross_entropy_loss(output, label_one_hot);
+			std::vector<number> cse = cross_entropy_loss(output, label_one_hot);
 			for (unsigned j = 0; j < cse.size(); j++) {
 				cse_epoch[j] += cse[j];
 			}
@@ -29,9 +30,10 @@ void train_model(Network &model, std::vector<Sample> data, const TrainConfig &co
 		std::cout << "Epoch " << epoch + 1 << "/" << config.epochs << " - Cross-Entropy Loss: ";
         float total_loss = 0.0;
 		for (const auto &loss : cse_epoch) { total_loss += loss; }
-
+		cross_entropy_losses.push_back(total_loss);
 		std::cout << total_loss << std::endl;
 	}
+	return cross_entropy_losses;
 }
 
 void evaluate_model(Network &model, const std::vector<Sample> &data, std::vector<int> *predictions) {

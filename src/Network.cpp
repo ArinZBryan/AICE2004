@@ -1,5 +1,6 @@
 #include "Network.h"
 #include "Matrix.h"
+#include "DataType.h"
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -36,7 +37,7 @@ void Network::save_weights(const std::string &path) const {
 	// Write W1 (hidden x INPUT_SIZE)
 	for (uint32_t i = 0; i < hidden; ++i) {
 		for (uint32_t j = 0; j < static_cast<uint32_t>(INPUT_SIZE); ++j) {
-			float v = weights[0](i,j);
+			float v = static_cast<float>(weights[0](i,j));
 			ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 		}
 	}
@@ -44,20 +45,20 @@ void Network::save_weights(const std::string &path) const {
 	// Write W2 (OUTPUT_SIZE x hidden)
 	for (uint32_t i = 0; i < static_cast<uint32_t>(OUTPUT_SIZE); ++i) {
 		for (uint32_t j = 0; j < hidden; ++j) {
-			float v = weights[1](i,j);
+			float v = static_cast<float>(weights[1](i,j));
 			ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 		}
 	}
 
 	// Write b1 (hidden)
 	for (uint32_t i = 0; i < hidden; ++i) {
-		float v = bias[0](i);
+		float v = static_cast<float>(bias[0](i));
 		ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 	}
 
 	// Write b2 (OUTPUT_SIZE)
 	for (uint32_t i = 0; i < static_cast<uint32_t>(OUTPUT_SIZE); ++i) {
-		float v = bias[1](i);
+		float v = static_cast<float>(bias[1](i));
 		ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 	}
 
@@ -69,12 +70,16 @@ Network::~Network() {}
 void Network::xavier_initialization(Matrix &W, int in_dim, int out_dim) {
 	std::mt19937 gen(random_seed);
 
+	//I don't know why, but if I change the random number generation to use `number`, and thus
+	//allow the use of FP64, I get completely different numbers out. So, to ensure compatibility
+	//we generate the numbers as floats and cast them to doubles only if we need to to preserve
+	//values.
 	float limit = sqrt(6.0f / (in_dim + out_dim));
 	std::uniform_real_distribution<float> dist(-limit, limit);
 
 	for (int i = 0; i < out_dim; i++) {
 		for (int j = 0; j < in_dim; j++) {
-			W(i,j) = dist(gen);
+			W(i,j) = static_cast<number>(dist(gen));
 		}
 	}
 }

@@ -26,7 +26,7 @@ find_package(TBB REQUIRED)
 find_package(Catch2 3 REQUIRED)
 
 # Use gnu++11 (GCC 4.8.5 supports C++11 sufficiently for this project)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++23 -Wall -Wextra -march=native -ffast-math -lm ${OpenMP_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -march=native -ffast-math -lm ${OpenMP_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
