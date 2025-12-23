@@ -95,7 +95,7 @@ int main() {
         0.001,  // learning_rate    [DO NOT MODIFY]
         1,     // batch_size          
         10,     // hidden_size      [DO NOT MODIFY]
-        1,      // threads    (known good output only supports threads=1)
+        6,      // threads    (known good output only supports threads=1)
         1       // tasks      (known good output only supports tasks=1)
     };
 
@@ -127,8 +127,9 @@ int main() {
     std::vector<float> actualLossCurve = train_model(net, train_data, config);
     // Print the trained prediction of data[eval_data_index].
     // Store predictions to save as file later.
-	std::vector<int> predictions;
-	evaluate_model(net, test_data, &predictions);
+    std::vector<int> predictions = get_predictions(net, test_data);
+    evaluate_predictions(test_data, predictions);
+    
 
     std::vector<uint8_t> actualPredictions = std::vector<uint8_t>();
     actualPredictions.reserve(predictions.size());

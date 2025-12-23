@@ -32,9 +32,9 @@ struct TrainConfig {
 };
 
 // Function to train the model
-std::vector<float> train_model(Network &model, const std::vector<Sample> data, const TrainConfig &config);
+std::vector<float> train_model(Network &model, const std::vector<Sample>& data, const TrainConfig &config);
 
 // Function to evaluate the model
-void evaluate_model(Network &model, const std::vector<Sample> &data, std::vector<int> *predictions = nullptr);
+float evaluate_predictions(const std::vector<Sample> &data, std::vector<int>& predictions);
 
-void evaluate_model_real(Network &model, const std::vector<Sample> &data, std::vector<int> *predictions = nullptr);
+std::vector<int> get_predictions(Network &model, const std::vector<Sample> &data);
