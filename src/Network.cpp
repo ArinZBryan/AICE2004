@@ -85,53 +85,72 @@ void Network::xavier_initialization(Matrix &W, int in_dim, int out_dim) {
 }
 
 Vector Network::forward(const Vector &input) {
-	last_input = input;
 	// Input to hidden: weights * input + bias
-	last_x1 = mat_times_vec(weights[0], input);
-	last_x2 = vec_plus_vec(last_x1, bias[0]);
+	Vector v = mat_times_vec(weights[0], input);
+	vec_plus_vec(v, bias[0], v);
 
 	// Activation function: Sigmoid
-	last_x3 = sigmoid_vec(last_x2);
+	sigmoid_vec(v, v);
 
 	// Hidden to output: weights * hidden + bias
-	last_x4 = mat_times_vec(weights[1], last_x3);
-	last_x5 = vec_plus_vec(last_x4, bias[1]);
+	Vector result = mat_times_vec(weights[1], v);
+	vec_plus_vec(result, bias[1], result);
 
 	// Apply softmax to get probabilities
-	last_output = softmax_vec(last_x5);
+	softmax_vec(result, result);
 
-	return last_output;
+	return result;
 }
 
-void Network::backpropagate(const Vector& target, double learning_rate) {
-	// Derivative of loss w.r.t. output (cross-entropy loss with softmax)
-	Vector delta_out = vec_minus_vec(last_output, target);
+Network::TrainResult Network::train(const Vector& input, const Vector& target, const std::vector<Matrix>& weights, const std::vector<Vector>& bias) {
+	
+	// ======================= Forward Step ========================
+	// Input->Hidden: weights * input + bias
+	Vector sigmoid = mat_times_vec(weights[0], input);
+	vec_plus_vec(sigmoid, const_cast<Vector&>(bias[0]), sigmoid);
+
+	// Input->Hidden activation function
+	sigmoid_vec(sigmoid, sigmoid);
+
+	// Hidden->Output: weights * hidden + bias
+	Vector forward_output = mat_times_vec(weights[1], sigmoid);
+	vec_plus_vec(forward_output, const_cast<Vector&>(bias[1]), forward_output);
+
+	// Output probability function
+	softmax_vec(forward_output, forward_output);
+
+	// ==================== Calculate CSE Delta ====================
+	Vector cse_delta = cross_entropy_loss(forward_output, target);
+
+	// ====================== Backpropogation ======================
+	Vector& bias2_gradient = forward_output;
+	vec_minus_vec(forward_output, const_cast<Vector&>(target), bias2_gradient);
 
 	// Gradient for hidden -> output weights and biases
-	Vector z4 = delta_out;
-	Matrix gradients_W2 = outer_product(z4, last_x3);
+	Matrix weight2_gradient = outer_product(bias2_gradient, sigmoid);
 
 	// Gradient for input -> hidden weights and biases
-	Matrix W2T = transpose(weights[1]);
-	Vector z3 = mat_times_vec(W2T, z4);
-	Vector sig_deriv = sigmoid_derivative(last_x2);
-	Vector z2 = multiply_elementwise_vec(z3, sig_deriv);
-	Matrix gradients_W1 = outer_product(z2, last_input);
+	Vector bias1_gradient = mat_transpose_times_vec(weights[1], bias2_gradient);
+	precomputed_sigmoid_derivative(sigmoid, sigmoid);
+	multiply_elementwise_vec(bias1_gradient, sigmoid, bias1_gradient);
+	Matrix weight1_gradient = outer_product(bias1_gradient, input);
 
-	// Update the biases
-	for (int i = 0; i < OUTPUT_SIZE; i++) {
-		for (size_t j = 0; j < hidden_size; j++) {
-			weights[1](i,j) -= learning_rate * gradients_W2(i,j);
-		}
-		bias[1](i) -= learning_rate * z4(i);
-	}
+	return { weight1_gradient, weight2_gradient, bias1_gradient, bias2_gradient, cse_delta };
+}
 
-	// Update the weights
+void Network::update(float learning_rate, const Network::TrainResult& result) {
 	for (size_t i = 0; i < hidden_size; i++) {
 		for (int j = 0; j < INPUT_SIZE; j++) {
-			weights[0](i,j) -= learning_rate * gradients_W1(i,j);
+			weights[0](i,j) -= learning_rate * result.weight1_grad(i,j);
 		}
-		bias[0](i) -= learning_rate * z2(i);
+		bias[0](i) -= learning_rate * result.bias1_grad(i);
+	}
+
+	for (int i = 0; i < Network::OUTPUT_SIZE; i++) {
+		for (size_t j = 0; j < this->hidden_size; j++) {
+			weights[1](i,j) -= learning_rate * result.weight2_grad(i,j);
+		}
+		bias[1](i) -= learning_rate * result.bias2_grad(i);
 	}
 }
 

@@ -10,11 +10,13 @@
 
 #define USE_AVX_MAT_TIMES_VEC
 #define USE_AVX_MAT_TRANSPOSE_TIMES_VEC
+#define USE_AVX_MAT_PLUS_MAT
 #define USE_AVX_VEC_PLUS_VEC
 #define USE_AVX_VEC_MINUS_VEC
 #define USE_AVX_MULTIPLY_ELEMENTWISE_VEC
 #define USE_AVX_SIGMOID_VEC
 #define USE_AVX_SIGMOID_DERIVATIVE
+#define USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE
 #define USE_AVX_SOFTMAX_VEC
 #define USE_AVX_CROSS_ENTROPY_LOSS
 #define USE_AVX_OUTER_PRODUCT
@@ -313,6 +315,41 @@ void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) 
 }
 #endif
 
+Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2) {
+	Matrix ret(mat1.rows(), mat1.cols());
+	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret);
+	return ret;
+}
+#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
+
+	size_t elems = mat1.rows() * mat1.cols();
+
+	vec_main_for(cur, elems) {
+		ymm a = vecload(mat1.data() + cur);
+		ymm b = vecload(mat2.data() + cur);
+		ymm r = vecadd(a, b);
+		vecstore(out.data() + cur, r);
+	}
+	vec_res_for(cur, elems) {
+		out.data()[cur] = mat1.data()[cur] + mat2.data()[cur];
+	}
+}
+#else
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
+	size_t elems = mat1.rows() * mat1.cols();
+	number* mat1_data = mat1.data();
+	number* mat2_data = mat2.data();
+	number* out_data = out.data();
+
+	for (size_t i = 0; i < elems; i++) {
+		out_data[i] = mat1_data[i] + mat2_data[i];
+	}
+}
+#endif
+
 /*
     Vector Addition
 
@@ -328,7 +365,7 @@ Vector vec_plus_vec(const Vector& vec1, const Vector& vec2) {
 #if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
 void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert((vec1.size() == vec2.size() && vec1.size() == out.size()));
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
 	out.resize(vec1.size());
@@ -353,7 +390,7 @@ void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 }
 #else
 void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
-	assert((vec1.size() == vec2.size() && vec1.size() == out.size()))
+	assert((vec1.size() == vec2.size()))
 	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
 		out(i) = vec1(i) + vec2(i);
@@ -376,7 +413,7 @@ Vector vec_minus_vec(const Vector& vec1, const Vector& vec2) {
 #if defined(USE_AVX_VEC_MINUS_VEC) && defined(__AVX__)
 void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert((vec1.size() == vec2.size() && out.size() == vec1.size()));
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
 	out.resize(vec1.size());
@@ -401,7 +438,7 @@ void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 }
 #else
 void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out) {
-	assert((vec1.size() == vec2.size() && out.size() == vec1.size()));
+	assert((vec1.size() == vec2.size()));
 	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
 		out(i) = vec1(i) - vec2(i);
@@ -424,7 +461,7 @@ Vector multiply_elementwise_vec(const Vector& vec1, const Vector& vec2) {
 #if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
 void multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert((vec1.size() == vec2.size() && out.size() == vec1.size()));
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
 	out.resize(vec1.size());
@@ -448,11 +485,54 @@ void multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	}
 }
 #else
-Vector multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
-	assert((vec1.size() == vec2.size() && vec1.size() == out.size()));
+void multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
 	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
 		out(i) = vec1(i) * vec2(i);
+	}
+}
+#endif
+
+/*
+    Vector Elementwise Division
+
+    vec1 = [u1, u2, u3, ...]
+    vec2 = [v1, v2, v3, ...]
+    return = [u1/v1, u2/v2, u3/v3, ...]
+*/
+Vector divide_elementwise_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	divide_elementwise_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
+#if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
+void divide_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+
+	out.resize(vec1.size());
+
+	const number* vec1_ptr = vec1.data();
+	const number* vec2_ptr = vec2.data();
+	number* res_ptr = out.data();
+
+	vec_main_for(elem, vec1.size()) {
+		const ymm a = vecload(vec1_ptr + elem);
+		const ymm b = vecload(vec2_ptr + elem);
+		const ymm res = vecdiv(a, b);
+		vecstore(res_ptr + elem, res);
+	}
+
+	vec_res_for(elem, vec1.size()) {
+		res_ptr[elem] = vec1_ptr[elem] / vec2_ptr[elem];
+	}
+}
+#else
+void divide_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+	out.resize(vec1.size());
+	for (size_t i = 0; i < vec1.size(); ++i) {
+		out(i) = vec1(i) / vec2(i);
 	}
 }
 #endif
@@ -650,13 +730,12 @@ void cross_entropy_loss(Vector& predicted, Vector& actual, Vector& out) {
     which is much faster
 */
 Matrix transpose(const Matrix& x) {
-	Matrix ret(x.rows(), x.cols());
+	Matrix ret(x.cols(), x.rows());
 	transpose(x, ret);
 	return ret;
 }
 void transpose(const Matrix& x, Matrix& out) {
-	assert((x.cols() != 0 && x.rows() != 0));
-	assert((x.rows() == out.rows() && x.cols() == out.cols()));
+	assert((x.rows() == out.cols() && x.cols() == out.rows()));
 
 	size_t rows = x.rows();
 	size_t cols = x.cols();
@@ -719,6 +798,46 @@ void sigmoid_derivative(Vector& vec, Vector& out) {
 	out.resize(vec.size());
 	for (size_t i = 0; i < vec.size(); ++i) {
 		out(i) = sig(i) * (1.0f - sig(i));
+	}
+}
+#endif
+
+/*
+    Vector Sigmoid Derivative (Elementwise)
+
+    vec = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
+    return = [vec1(1-vec1), vec2(1-vec2), vec3(1-vec3), ...]
+*/
+Vector precomputed_sigmoid_derivative(const Vector& vec) {
+	Vector ret;
+	precomputed_sigmoid_derivative(const_cast<Vector&>(vec), ret);
+	return ret;
+}
+#if defined(USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE) && defined(__AVX__)
+void precomputed_sigmoid_derivative(Vector& vec, Vector& out) {
+	out.resize(vec.size());
+
+	// process floats 8 at a time
+	vec_main_for(cur, vec.size()) {
+		ymm vec_8 = vecload(vec.data() + cur);
+
+		ymm one_minus = vecsub(vecsetvalue(1.0), vec_8);
+		vec_8 = vecmul(vec_8, one_minus);
+
+		// store back into result vector
+		vecstore(out.data() + cur, vec_8);
+	}
+
+	// handle residual computations
+	vec_res_for(cur, vec.size()) {
+		out(cur) = vec(cur) * (1.0f - vec(cur));
+	}
+}
+#else
+void precomputed_sigmoid_derivative(Vector& vec, Vector& out) {
+	out.resize(vec.size());
+	for (size_t i = 0; i < vec.size(); ++i) {
+		out(i) = vec(i) * (1.0f - vec(i));
 	}
 }
 #endif

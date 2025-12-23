@@ -87,8 +87,6 @@ std::tuple<float, float, float> vecAccuracy(std::vector<float> a, std::vector<fl
 }
 
 int main() {
-    constexpr float WEIGHT_EQUAL_THRESHOLD_PERCENT = 5;  //Specification requires 100% accuracy within an error margin of 5%
-    constexpr float BIAS_EQUAL_THRESHOLD_PERCENT = 5;    //Specification requires 100% accuracy within an error margin of 5%
     constexpr unsigned int INPUT_SIZE = 784;
     constexpr unsigned int OUTPUT_SIZE = 10;
     constexpr TrainConfig config {

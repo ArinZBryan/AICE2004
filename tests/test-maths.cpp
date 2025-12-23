@@ -2,9 +2,11 @@
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+
 #include "Matrix.h"
 #include "Vector.h"
 #include "Maths.h"
+#include "DataType.h"
 
 #include <algorithm>
 #include <cmath>
@@ -91,6 +93,13 @@ std::vector<float> old_multiply_elementwise_vec(const std::vector<float> &vec1, 
 	}
 	return result;
 }
+std::vector<float> old_divide_elementwise_vec(const std::vector<float> &vec1, const std::vector<float> &vec2) {
+	std::vector<float> result(vec1.size());
+	for (size_t i = 0; i < vec1.size(); ++i) {
+		result[i] = vec1[i] / vec2[i];
+	}
+	return result;
+}
 std::vector<std::vector<float>> old_outer_product(const std::vector<float> &a, const std::vector<float> &b) {
 	size_t                m = a.size();
 	size_t                n = b.size();
@@ -112,9 +121,9 @@ std::vector<std::vector<float>> old_outer_product(const std::vector<float> &a, c
 // This is just mathematically wrong, so I have changed the functionality
 
 TEST_CASE("mat_times_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -192,6 +201,7 @@ TEST_CASE("mat_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Vector new_vec({1, 2, 3});
         Matrix new_mat({{min, 0, 0}, 
@@ -222,6 +232,7 @@ TEST_CASE("mat_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -290,6 +301,7 @@ TEST_CASE("mat_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -322,11 +334,12 @@ TEST_CASE("mat_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("mat_times_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -409,6 +422,7 @@ TEST_CASE("mat_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Vector new_vec({1, 2, 3});
         Matrix new_mat({{min, 0, 0}, 
@@ -441,6 +455,7 @@ TEST_CASE("mat_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -513,6 +528,7 @@ TEST_CASE("mat_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -547,12 +563,13 @@ TEST_CASE("mat_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 
 TEST_CASE("mat_transpose_times_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -649,6 +666,7 @@ TEST_CASE("mat_transpose_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Vector new_vec({1, 2, 3});
         Matrix new_mat({{min, 0, 0}, 
@@ -679,6 +697,7 @@ TEST_CASE("mat_transpose_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -747,6 +766,7 @@ TEST_CASE("mat_transpose_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -779,12 +799,12 @@ TEST_CASE("mat_transpose_times_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("mat_transpose_times_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -887,6 +907,7 @@ TEST_CASE("mat_transpose_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Vector new_vec({1, 2, 3});
         Matrix new_mat({{min, 0, 0}, 
@@ -919,6 +940,7 @@ TEST_CASE("mat_transpose_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -991,6 +1013,7 @@ TEST_CASE("mat_transpose_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Vector new_vec(18);
         for (size_t i = 0; i < new_vec.size(); i++) { new_vec(i) = dist(mt); }
@@ -1025,13 +1048,231 @@ TEST_CASE("mat_transpose_times_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
+}
 
+TEST_CASE("mat_plus_mat", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("3x3 All Ones Matrices") {
+        Matrix m1 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix m2 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+
+        Matrix mr = mat_plus_mat(m1, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("3x3 Random Matrices") {
+        Matrix m1 = Matrix(3, 3);
+        Matrix m2 = Matrix(3, 3);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = mat_plus_mat(m1, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("18x18 Random Matrices") {
+        Matrix m1 = Matrix(18, 18);
+        Matrix m2 = Matrix(18, 18);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = mat_plus_mat(m1, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+}
+TEST_CASE("mat_plus_mat_noallocate_alias0", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("3x3 All Ones Matrices") {
+        Matrix m1 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix m2 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+
+        Matrix mr = Matrix(3,3);
+        mat_plus_mat(m1, m2, mr);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("3x3 Random Matrices") {
+        Matrix m1 = Matrix(3, 3);
+        Matrix m2 = Matrix(3, 3);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = Matrix(3,3);
+        mat_plus_mat(m1, m2, mr);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("18x18 Random Matrices") {
+        Matrix m1 = Matrix(18, 18);
+        Matrix m2 = Matrix(18, 18);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = Matrix(18,18);
+        mat_plus_mat(m1, m2, mr);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(mr(i,j), WithinRel(m1(i,j) + m2(i,j)));
+        }
+    }
+}
+TEST_CASE("mat_plus_mat_noallocate_alias1", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("3x3 All Ones Matrices") {
+        Matrix m1 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix m2 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m2, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("3x3 Random Matrices") {
+        Matrix m1 = Matrix(3, 3);
+        Matrix m2 = Matrix(3, 3);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m2, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + m2(i,j)));
+        }
+    }
+    SECTION("18x18 Random Matrices") {
+        Matrix m1 = Matrix(18, 18);
+        Matrix m2 = Matrix(18, 18);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m2, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + m2(i,j)));
+        }
+    }
+}
+TEST_CASE("mat_plus_mat_noallocate_alias2", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("3x3 All Ones Matrices") {
+        Matrix m1 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix m2 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix mr = m2;
+
+        mat_plus_mat(m1, m2, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m2(i,j), WithinRel(m1(i,j) + mr(i,j)));
+        }
+    }
+    SECTION("3x3 Random Matrices") {
+        Matrix m1 = Matrix(3, 3);
+        Matrix m2 = Matrix(3, 3);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = m2;
+
+        mat_plus_mat(m1, m2, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m2(i,j), WithinRel(m1(i,j) + mr(i,j)));
+        }
+    }
+    SECTION("18x18 Random Matrices") {
+        Matrix m1 = Matrix(18, 18);
+        Matrix m2 = Matrix(18, 18);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+            m2.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = m2;
+
+        mat_plus_mat(m1, m2, m2);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m2(i,j), WithinRel(m1(i,j) + mr(i,j)));
+        }
+    }
+}
+TEST_CASE("mat_plus_mat_noallocate_alias3", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("3x3 All Ones Matrices") {
+        Matrix m1 = {{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m1, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + mr(i,j)));
+        }
+    }
+    SECTION("3x3 Random Matrices") {
+        Matrix m1 = Matrix(3, 3);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+        }
+        
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m1, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + mr(i,j)));
+        }
+    }
+    SECTION("18x18 Random Matrices") {
+        Matrix m1 = Matrix(18, 18);
+        for (size_t i = 0; i < m1.cols() * m1.rows(); i++) {
+            m1.data()[i] = dist(mt);
+        }
+        Matrix mr = m1;
+
+        mat_plus_mat(m1, m1, m1);
+        for (size_t i = 0; i < mr.rows(); i++) for (size_t j = 0; j < mr.cols(); j++) {
+            REQUIRE_THAT(m1(i,j), WithinRel(mr(i,j) + mr(i,j)));
+        }
+    }
 }
 
 TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1089,6 +1330,7 @@ TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -1103,6 +1345,7 @@ TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
         }
     }
     SECTION("Size-3 Floating Point Maximum Vectors") {
+
         const Vector new_vec1({max, max, max});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -1115,6 +1358,7 @@ TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1147,6 +1391,7 @@ TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1179,11 +1424,12 @@ TEST_CASE("vec_plus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_plus_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1245,6 +1491,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -1273,6 +1520,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1307,6 +1555,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1341,11 +1590,12 @@ TEST_CASE("vec_plus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_plus_vec_noallocate_alias1", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1403,6 +1653,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -1429,6 +1680,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1461,6 +1713,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1493,11 +1746,12 @@ TEST_CASE("vec_plus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_plus_vec_noallocate_alias2", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1555,6 +1809,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -1581,6 +1836,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1613,6 +1869,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1645,11 +1902,12 @@ TEST_CASE("vec_plus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_plus_vec_noallocate_alias3", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1699,6 +1957,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -1721,6 +1980,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1745,6 +2005,7 @@ TEST_CASE("vec_plus_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1769,12 +2030,13 @@ TEST_CASE("vec_plus_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 
 TEST_CASE("sigmoid_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1844,6 +2106,7 @@ TEST_CASE("sigmoid_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -1866,6 +2129,7 @@ TEST_CASE("sigmoid_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -1892,6 +2156,7 @@ TEST_CASE("sigmoid_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -1918,11 +2183,12 @@ TEST_CASE("sigmoid_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("sigmoid_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -1998,6 +2264,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -2022,6 +2289,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2050,6 +2318,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64 
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2078,11 +2347,12 @@ TEST_CASE("sigmoid_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("sigmoid_vec_noallocate_alias1", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2152,6 +2422,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -2174,6 +2445,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2198,6 +2470,7 @@ TEST_CASE("sigmoid_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2222,11 +2495,12 @@ TEST_CASE("sigmoid_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 
 TEST_CASE("softmax_vec", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    number min = std::numeric_limits<number>::min();
+    number max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2276,17 +2550,7 @@ TEST_CASE("softmax_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-    SECTION("Empty Vectors") {
-        const Vector new_vec1({});
-        std::vector<float> old_vec1 = to_float_vector(new_vec1);
-
-        Vector new_res = softmax_vec(new_vec1);
-        std::vector<float> old_res = old_softmax_vec(old_vec1);
-        REQUIRE((new_res.size() == old_res.size() && new_res.size() == 0));
-        for (size_t i = 0; i < new_res.size(); i++) {
-            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
-        }
-    }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -2309,6 +2573,7 @@ TEST_CASE("softmax_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2322,6 +2587,7 @@ TEST_CASE("softmax_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2348,11 +2614,11 @@ TEST_CASE("softmax_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("softmax_vec_noallocate_alias0", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    number min = std::numeric_limits<number>::min();
+    number max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2406,18 +2672,7 @@ TEST_CASE("softmax_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-    SECTION("Empty Vectors") {
-        Vector new_vec1({});
-        std::vector<float> old_vec1 = to_float_vector(new_vec1);
-
-        Vector new_res;
-        softmax_vec(new_vec1, new_res);
-        std::vector<float> old_res = old_softmax_vec(old_vec1);
-        REQUIRE((new_res.size() == old_res.size() && new_res.size() == 0));
-        for (size_t i = 0; i < new_res.size(); i++) {
-            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
-        }
-    }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -2442,6 +2697,7 @@ TEST_CASE("softmax_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2455,6 +2711,7 @@ TEST_CASE("softmax_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2481,7 +2738,7 @@ TEST_CASE("softmax_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("softmax_vec_noallocate_alias1", "[Maths.cpp]") {
     float min = std::numeric_limits<float>::min();
@@ -2535,17 +2792,7 @@ TEST_CASE("softmax_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
-    SECTION("Empty Vectors") {
-        Vector new_vec1({});
-        std::vector<float> old_vec1 = to_float_vector(new_vec1);
-
-        softmax_vec(new_vec1, new_vec1);
-        std::vector<float> old_res = old_softmax_vec(old_vec1);
-        REQUIRE((new_vec1.size() == old_res.size() && new_vec1.size() == 0));
-        for (size_t i = 0; i < new_vec1.size(); i++) {
-            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
-        }
-    }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -2568,6 +2815,7 @@ TEST_CASE("softmax_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2580,6 +2828,7 @@ TEST_CASE("softmax_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2604,12 +2853,12 @@ TEST_CASE("softmax_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 
 TEST_CASE("cross_entropy_loss", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2654,6 +2903,7 @@ TEST_CASE("cross_entropy_loss", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -2680,6 +2930,7 @@ TEST_CASE("cross_entropy_loss", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2696,6 +2947,7 @@ TEST_CASE("cross_entropy_loss", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2728,10 +2980,11 @@ TEST_CASE("cross_entropy_loss", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("cross_entropy_loss_noallocate_alias0", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2779,6 +3032,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -2807,6 +3061,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2824,6 +3079,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2858,11 +3114,11 @@ TEST_CASE("cross_entropy_loss_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("cross_entropy_loss_noallocate_alias1", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -2907,6 +3163,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -2933,6 +3190,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -2949,6 +3207,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -2981,11 +3240,11 @@ TEST_CASE("cross_entropy_loss_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("cross_entropy_loss_noallocate_alias2", "[Maths.cpp]") {
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3030,6 +3289,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -3056,6 +3316,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -3072,6 +3333,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -3104,7 +3366,7 @@ TEST_CASE("cross_entropy_loss_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
-
+#endif
 }
 TEST_CASE("cross_entropy_loss_noallocate_alias3", "[Maths.cpp]") {
     std::random_device rd;
@@ -3160,9 +3422,9 @@ TEST_CASE("cross_entropy_loss_noallocate_alias3", "[Maths.cpp]") {
 }
 
 TEST_CASE("vec_minus_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3220,6 +3482,7 @@ TEST_CASE("vec_minus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -3246,6 +3509,7 @@ TEST_CASE("vec_minus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -3278,6 +3542,7 @@ TEST_CASE("vec_minus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -3310,11 +3575,12 @@ TEST_CASE("vec_minus_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_minus_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3376,6 +3642,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -3404,6 +3671,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -3438,6 +3706,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -3472,11 +3741,12 @@ TEST_CASE("vec_minus_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_minus_vec_noallocate_alias1", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3534,6 +3804,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -3560,6 +3831,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -3592,6 +3864,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -3624,11 +3897,12 @@ TEST_CASE("vec_minus_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_minus_vec_noallocate_alias2", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3686,6 +3960,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -3712,6 +3987,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -3744,6 +4020,7 @@ TEST_CASE("vec_minus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -3776,10 +4053,9 @@ TEST_CASE("vec_minus_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("vec_minus_vec_noallocate_alias3", "[Maths.cpp]") {
-
-
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
@@ -3833,9 +4109,9 @@ TEST_CASE("vec_minus_vec_noallocate_alias3", "[Maths.cpp]") {
 }
 
 TEST_CASE("transpose", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -3966,6 +4242,7 @@ TEST_CASE("transpose", "[Maths.cpp]") {
             }
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Matrix new_mat({{min, 0, 0}, 
                         {0, min, 0}, 
@@ -3996,6 +4273,7 @@ TEST_CASE("transpose", "[Maths.cpp]") {
             }
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Matrix new_mat(18, 18, 0.0f);
         for (size_t i = 0; i < new_mat.rows(); i++) { new_mat(i, i) = 1.0f; }
@@ -4052,6 +4330,7 @@ TEST_CASE("transpose", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Matrix new_mat(18, 18, 0.0f);
         for (size_t i = 0; i < new_mat.rows(); i++) for (size_t j = 0; j < new_mat.cols(); j++) { 
@@ -4080,13 +4359,12 @@ TEST_CASE("transpose", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
-
-
+#endif
 }
 TEST_CASE("transpose_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -4223,6 +4501,7 @@ TEST_CASE("transpose_noallocate_alias0", "[Maths.cpp]") {
             }
         }
     }
+#ifndef USE_FP64
     SECTION("3x3 Floating Point Minimum Identity Matrix") {
         Matrix new_mat({{min, 0, 0}, 
                         {0, min, 0}, 
@@ -4255,6 +4534,7 @@ TEST_CASE("transpose_noallocate_alias0", "[Maths.cpp]") {
             }
         }
     }
+#endif
     SECTION("18x18 Idenitity Matrix") {
         Matrix new_mat(18, 18, 0.0f);
         for (size_t i = 0; i < new_mat.rows(); i++) { new_mat(i, i) = 1.0f; }
@@ -4315,6 +4595,7 @@ TEST_CASE("transpose_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#ifndef USE_FP64
     SECTION("18x18 Floating Point Minimum Identity Matrix") {
         Matrix new_mat(18, 18, 0.0f);
         for (size_t i = 0; i < new_mat.rows(); i++) for (size_t j = 0; j < new_mat.cols(); j++) { 
@@ -4345,14 +4626,13 @@ TEST_CASE("transpose_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
-
-
+#endif
 }
 
 TEST_CASE("sigmoid_derivative", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -4424,6 +4704,7 @@ TEST_CASE("sigmoid_derivative", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -4446,6 +4727,7 @@ TEST_CASE("sigmoid_derivative", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -4472,6 +4754,7 @@ TEST_CASE("sigmoid_derivative", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -4498,11 +4781,12 @@ TEST_CASE("sigmoid_derivative", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#endif
 }
 TEST_CASE("sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -4580,6 +4864,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -4604,6 +4889,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -4630,6 +4916,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -4656,11 +4943,12 @@ TEST_CASE("sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#endif
 }
 TEST_CASE("sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -4732,6 +5020,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -4754,6 +5043,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -4778,6 +5068,7 @@ TEST_CASE("sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -4802,12 +5093,516 @@ TEST_CASE("sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinAbs(old_res[i], 1e-6));
         }
     }
+#endif
+}
+
+TEST_CASE("precomputed_sigmoid_derivative", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vector [0,1)") {
+        const Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [0,1)") {
+        const Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Vector [-6,6)") {
+        const Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [-6,6)") {
+        const Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f, 0.6234469875463479*12.0f - 6.0f, 0.6355146253711659*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        const Vector new_vec1({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        const Vector new_vec1({inf, inf, inf});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        const Vector new_vec1({min, min, min});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        const Vector new_vec1({max, max, max});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_res = sigmoid_vec(new_vec1);
+        new_res = precomputed_sigmoid_derivative(new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#endif
+}
+TEST_CASE("precomputed_sigmoid_derivative_noallocate_alias0", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vector [0,1)") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [0,1)") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Vector [-6,6)") {
+        Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [-6,6)") {
+        Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f, 0.6234469875463479*12.0f - 6.0f, 0.6355146253711659*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        Vector new_vec1({inf, inf, inf});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        Vector new_vec1({min, min, min});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        Vector new_vec1({max, max, max});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        
+        Vector new_tmp = sigmoid_vec(new_vec1);
+        Vector new_res;
+        precomputed_sigmoid_derivative(new_tmp, new_res);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#endif
+}
+TEST_CASE("precomputed_sigmoid_derivative_noallocate_alias1", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vector [0,1)") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [0,1)") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Vector [-6,6)") {
+        Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vector [-6,6)") {
+        Vector new_vec1({0.15564064975599057*12.0f - 6.0f, 0.8102044338919502*12.0f - 6.0f, 0.9363652236747958*12.0f - 6.0f, 0.6234469875463479*12.0f - 6.0f, 0.6355146253711659*12.0f - 6.0f});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        Vector new_vec1({inf, inf, inf});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        Vector new_vec1({min, min, min});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        Vector new_vec1({max, max, max});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        sigmoid_vec(new_vec1, new_vec1);
+        precomputed_sigmoid_derivative(new_vec1, new_vec1);
+        std::vector<float> old_res = old_sigmoid_derivative(old_vec1);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinAbs(old_res[i], 1e-6));
+        }
+    }
+#endif
 }
 
 TEST_CASE("multiply_elementwise_vec", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -4865,6 +5660,7 @@ TEST_CASE("multiply_elementwise_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -4891,6 +5687,7 @@ TEST_CASE("multiply_elementwise_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -4923,6 +5720,7 @@ TEST_CASE("multiply_elementwise_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -4955,11 +5753,12 @@ TEST_CASE("multiply_elementwise_vec", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("multiply_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5021,6 +5820,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -5049,6 +5849,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5083,6 +5884,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5117,11 +5919,12 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("multiply_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5179,6 +5982,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -5205,6 +6009,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5235,6 +6040,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5265,11 +6071,12 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("multiply_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5327,6 +6134,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -5353,6 +6161,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5385,6 +6194,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5417,11 +6227,12 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
         }
     }
+#endif
 }
 TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5471,6 +6282,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         Vector new_vec1({min, min, min});
         std::vector<float> old_vec1 = to_float_vector(new_vec1);
@@ -5493,6 +6305,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5517,6 +6330,7 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5536,6 +6350,594 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
 
         multiply_elementwise_vec(new_vec1, new_vec1, new_vec1);
         std::vector<float> old_res = old_multiply_elementwise_vec(old_vec1, old_vec1);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+}
+
+TEST_CASE("divide_elementwise_vec", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vectors") {
+        const Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res = divide_elementwise_vec(new_vec1, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vectors") {
+        const Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958, 0.6234469875463479, 0.6355146253711659});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res = divide_elementwise_vec(new_vec1, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        const Vector new_vec1({});
+        const Vector new_vec2({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res = divide_elementwise_vec(new_vec1, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res = divide_elementwise_vec(new_vec1, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+}
+TEST_CASE("divide_elementwise_vec_noallocate_alias0", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958, 0.6234469875463479, 0.6355146253711659});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        Vector new_vec2({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        Vector new_vec1({inf, inf, inf});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        Vector new_vec1({min, min, min});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        Vector new_vec1({max, max, max});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_res.size() == old_res.size()));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        Vector new_res;
+        divide_elementwise_vec(new_vec1, new_vec2, new_res);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_res.size() == old_res.size())));
+        for (size_t i = 0; i < new_res.size(); i++) {
+            REQUIRE_THAT(new_res(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+}
+TEST_CASE("divide_elementwise_vec_noallocate_alias1", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958, 0.6234469875463479, 0.6355146253711659});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        Vector new_vec2({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        Vector new_vec1({inf, inf, inf});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        Vector new_vec1({min, min, min});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        Vector new_vec1({max, max, max});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec1.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+}
+TEST_CASE("divide_elementwise_vec_noallocate_alias2", "[Maths.cpp]") {
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958, 0.6234469875463479, 0.6355146253711659});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        Vector new_vec2({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Infinite Vectors") {
+        Vector new_vec1({inf, inf, inf});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-3 Floating Point Minimum Vectors") {
+        Vector new_vec1({min, min, min});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-3 Floating Point Maximum Vectors") {
+        Vector new_vec1({max, max, max});
+        Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE((new_vec2.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec2.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Infinite Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = inf; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec2.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+#ifndef USE_FP64
+    SECTION("Size-18 Floating Point Minimum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec2.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Floating Point Maximum Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = max; }
+        Vector new_vec2(18);
+        for (size_t i = 0; i < new_vec2.size(); i++) { new_vec2(i) = dist(mt); }
+
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+        std::vector<float> old_vec2 = to_float_vector(new_vec2);
+
+        divide_elementwise_vec(new_vec1, new_vec2, new_vec2);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec2);
+        REQUIRE(((new_vec2.size() == old_res.size())));
+        for (size_t i = 0; i < new_vec2.size(); i++) {
+            REQUIRE_THAT(new_vec2(i), WithinRel(old_res[i]));
+        }
+    }
+#endif
+}
+TEST_CASE("divide_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+
+    SECTION("Size-3 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        divide_elementwise_vec(new_vec1, new_vec1, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-5 Vectors") {
+        Vector new_vec1({0.44131635835602023, 0.4330904472915381, 0.4504758049261586, 0.693004892325785, 0.30291798447279616});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        divide_elementwise_vec(new_vec1, new_vec1, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Empty Vectors") {
+        Vector new_vec1({});
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        divide_elementwise_vec(new_vec1, new_vec1, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec1);
+        REQUIRE((new_vec1.size() == old_res.size()));
+        for (size_t i = 0; i < new_vec1.size(); i++) {
+            REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
+        }
+    }
+    SECTION("Size-18 Vectors") {
+        Vector new_vec1(18);
+        for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
+        std::vector<float> old_vec1 = to_float_vector(new_vec1);
+
+        divide_elementwise_vec(new_vec1, new_vec1, new_vec1);
+        std::vector<float> old_res = old_divide_elementwise_vec(old_vec1, old_vec1);
         REQUIRE(((new_vec1.size() == old_res.size())));
         for (size_t i = 0; i < new_vec1.size(); i++) {
             REQUIRE_THAT(new_vec1(i), WithinRel(old_res[i]));
@@ -5544,9 +6946,9 @@ TEST_CASE("multiply_elementwise_vec_noallocate_alias3", "[Maths.cpp]") {
 }
 
 TEST_CASE("outer_product", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5612,6 +7014,7 @@ TEST_CASE("outer_product", "[Maths.cpp]") {
             }
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -5642,6 +7045,7 @@ TEST_CASE("outer_product", "[Maths.cpp]") {
             }
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5674,6 +7078,7 @@ TEST_CASE("outer_product", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5706,11 +7111,12 @@ TEST_CASE("outer_product", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#endif
 }
 TEST_CASE("outer_product_noallocate_alias0", "[Maths.cpp]") {
-    float inf = std::numeric_limits<float>::infinity();
-    float min = std::numeric_limits<float>::min();
-    float max = std::numeric_limits<float>::max();
+    float inf = std::numeric_limits<number>::infinity();
+    float min = std::numeric_limits<number>::min();
+    float max = std::numeric_limits<number>::max();
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -5780,6 +7186,7 @@ TEST_CASE("outer_product_noallocate_alias0", "[Maths.cpp]") {
             }
         }
     }
+#ifndef USE_FP64
     SECTION("Size-3 Floating Point Minimum Vectors") {
         const Vector new_vec1({min, min, min});
         const Vector new_vec2({0.15564064975599057, 0.8102044338919502, 0.9363652236747958});
@@ -5812,6 +7219,7 @@ TEST_CASE("outer_product_noallocate_alias0", "[Maths.cpp]") {
             }
         }
     }
+#endif
     SECTION("Size-18 Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = dist(mt); }
@@ -5846,6 +7254,7 @@ TEST_CASE("outer_product_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#ifndef USE_FP64
     SECTION("Size-18 Floating Point Minimum Vectors") {
         Vector new_vec1(18);
         for (size_t i = 0; i < new_vec1.size(); i++) { new_vec1(i) = min; }
@@ -5880,4 +7289,5 @@ TEST_CASE("outer_product_noallocate_alias0", "[Maths.cpp]") {
             REQUIRE_THAT(new_res(i,j), WithinRel(old_res[i][j]));
         }
     }
+#endif
 }

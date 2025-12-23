@@ -262,14 +262,8 @@ Network::state smuggle(Network& net) {
 	    net.hidden_size,
 	    net.random_seed,
 	    net.weights,
-	    net.bias,
-	    net.last_input,
-	    net.last_x1,
-	    net.last_x2,
-	    net.last_x3,
-	    net.last_x4,
-	    net.last_x5,
-	    net.last_output};
+	    net.bias
+    };
 }
 
 int main(int argc, char* argv[]) {
