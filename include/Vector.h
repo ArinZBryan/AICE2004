@@ -31,6 +31,9 @@ public:
 
     inline size_t size() const { return _data.size(); }
 
+    inline void resize(size_t new_size) { _data.resize(new_size); }
+    inline void reserve(size_t new_capacity) { _data.reserve(new_capacity); }
+
     inline number* data() { return _data.data(); };
     inline const number* data() const { return _data.data(); };
 

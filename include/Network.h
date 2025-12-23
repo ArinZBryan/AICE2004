@@ -20,13 +20,22 @@ class Network {
 	Network(unsigned int hidden_size, unsigned int seed);
 	~Network();
 
-	// inference
-	Vector forward(const Vector &input);
+	// Inference
 	int predict(const Vector &input);
 	int predict(const std::vector<float> &input);
 
-	// training
-	void backpropagate(const Vector &target, double learning_rate);
+	// Training
+	struct TrainResult {
+		Matrix weight1_grad;
+		Matrix weight2_grad;
+		Vector bias1_grad;
+		Vector bias2_grad;
+		Vector cse_delta;
+	};
+	Vector forward(const Vector &input);
+	static TrainResult train(const Vector& input, const Vector& target, const std::vector<Matrix>& weights, const std::vector<Vector>& bias);
+	void update(float learning_rate, const TrainResult& result);
+
 
 	// Getters
 	const std::vector<Matrix> &get_weights() const {
@@ -46,13 +55,6 @@ class Network {
 		const unsigned int& random_seed;
 		const std::vector<Matrix>& weights;
 		const std::vector<Vector>& bias;
-		const Vector& last_input;
-		const Vector& last_x1;
-		const Vector& last_x2;
-		const Vector& last_x3;
-		const Vector& last_x4;
-		const Vector& last_x5;
-		const Vector& last_output;
 	};
 	// DO NOT IMPLEMENT OR USE OUTSIDE OF THE TESTING ENVIRONMENT
 	friend state smuggle(Network& net);
@@ -70,13 +72,4 @@ class Network {
 	unsigned int random_seed;
 	std::vector<Matrix> weights;
 	std::vector<Vector> bias;
-
-	// Intermediary variables for backpropagation
-	Vector last_input;
-	Vector last_x1;
-	Vector last_x2;
-	Vector last_x3;
-	Vector last_x4;
-	Vector last_x5;
-	Vector last_output;
 };

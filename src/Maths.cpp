@@ -1,41 +1,42 @@
 #include <algorithm>
-#include <cmath>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 
-#include "Maths.h"
-#include "Vector.h"
-#include "Matrix.h"
 #include "DataType.h"
+#include "Maths.h"
+#include "Matrix.h"
+#include "Vector.h"
 
 #define USE_AVX_MAT_TIMES_VEC
 #define USE_AVX_MAT_TRANSPOSE_TIMES_VEC
+#define USE_AVX_MAT_PLUS_MAT
 #define USE_AVX_VEC_PLUS_VEC
 #define USE_AVX_VEC_MINUS_VEC
 #define USE_AVX_MULTIPLY_ELEMENTWISE_VEC
 #define USE_AVX_SIGMOID_VEC
 #define USE_AVX_SIGMOID_DERIVATIVE
+#define USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE
 #define USE_AVX_SOFTMAX_VEC
 #define USE_AVX_CROSS_ENTROPY_LOSS
 #define USE_AVX_OUTER_PRODUCT
-
 
 #if defined(__AVX__)
 #include <immintrin.h>
 
 /*
-	Vectorised Single-Precision Floating Point Base Natural Logarithm
-	
-	Calculates the natural logarithm of all floating point values in
-	a YMM register. Provided by glibc and linked in using `-lm`
+    Vectorised Single-Precision Floating Point Base Natural Logarithm
+
+    Calculates the natural logarithm of all floating point values in
+    a YMM register. Provided by glibc and linked in using `-lm`
 */
 extern "C" __m256 _ZGVdN8v_logf(__m256 x);
 extern "C" __m256d _ZGVdN4v_log(__m256d x);
 /*
-	Vectorised Single-Precision Floating Point Euler's Number Exponentiation
+    Vectorised Single-Precision Floating Point Euler's Number Exponentiation
 
-	Calculates Euler's number to the power of all floating point values in
-	a YMM register. Provided by glibc and linked in using `-lm`
+    Calculates Euler's number to the power of all floating point values in
+    a YMM register. Provided by glibc and linked in using `-lm`
 */
 extern "C" __m256 _ZGVdN8v_expf(__m256 x);
 extern "C" __m256d _ZGVdN4v_exp(__m256d x);
@@ -58,9 +59,9 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecstore(p, x) _mm256_storeu_pd(p, x)
 #define vechadd(x) mm256_hadd_pd_fast(x)
 #define vecmax(x) mm256_max_pd_vector(x)
-#define vecfit(x) (((x)/4)*4)
-#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval)/4)*4); (itvar) += 4)
-#define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval)/4)*4); (itvar) < (maxval); itvar++)
+#define vecfit(x) (((x) / 4) * 4)
+#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 4) * 4); (itvar) += 4)
+#define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 4) * 4); (itvar) < (maxval); itvar++)
 #define ymm __m256d
 #else
 #define veclog(x) _ZGVdN8v_logf(x)
@@ -80,37 +81,30 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecstore(p, x) _mm256_storeu_ps(p, x)
 #define vechadd(x) mm256_hadd_ps_fast(x)
 #define vecmax(x) mm256_max_ps_vector(x)
-#define vecfit(x) (((x)/8)*8)
-#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval)/8)*8); (itvar) += 8)
-#define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval)/8)*8); (itvar) < (maxval); itvar++)
+#define vecfit(x) (((x) / 8) * 8)
+#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)
+#define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 8) * 8); (itvar) < (maxval); itvar++)
 #define ymm __m256
 #endif
 
-/*
-	YMM Horizontal Add Packed Single-Precision Floating Point Number (Fast)
-	This function returns the sum of all single precision floats in an AVX
-	register (8 floats). It is faster (in theory) than decomposing the YMM
-	register into two XMM registers and using the SSE hadd function on each
-	or using the avx hadd function repeatedly
-*/
 float mm256_hadd_ps_fast(__m256 x) {
 	// x = ( x7, x6, x5, x4, x3, x2, x1, x0 )
 
-	const __m128 hi4floats = _mm256_extractf128_ps(x, 1); 			// get x7 - x4 in 128-bit xmm register
-	const __m128 lo4floats = _mm256_castps256_ps128(x); 			// get x3 - x0 in 128-bit xmm register
+	const __m128 hi4floats = _mm256_extractf128_ps(x, 1); // get x7 - x4 in 128-bit xmm register
+	const __m128 lo4floats = _mm256_castps256_ps128(x);   // get x3 - x0 in 128-bit xmm register
 
-	const __m128 sum4floats = _mm_add_ps(hi4floats, lo4floats); 	// add xmm registers
+	const __m128 sum4floats = _mm_add_ps(hi4floats, lo4floats); // add xmm registers
 
-    const __m128 lo2floats = sum4floats;							// copy xmm register into another
-    const __m128 hi2floats = _mm_movehl_ps(sum4floats, sum4floats); // copy top two floats into bottom two floats of xmm register
+	const __m128 lo2floats = sum4floats;                            // copy xmm register into another
+	const __m128 hi2floats = _mm_movehl_ps(sum4floats, sum4floats); // copy top two floats into bottom two floats of xmm register
 
-    const __m128 sum2floats = _mm_add_ps(hi2floats, lo2floats); 	// add xmm registers
-    
-	const __m128 lo = sum2floats;									// copy xmm register into another
-    const __m128 hi = _mm_shuffle_ps(sum2floats, sum2floats, 0x1);	// extract 2nd float from sum2floats into hi first float
+	const __m128 sum2floats = _mm_add_ps(hi2floats, lo2floats); // add xmm registers
 
-    const __m128 sum = _mm_add_ss(lo, hi);							// add single floats in first positions
-    return _mm_cvtss_f32(sum);	
+	const __m128 lo = sum2floats;                                  // copy xmm register into another
+	const __m128 hi = _mm_shuffle_ps(sum2floats, sum2floats, 0x1); // extract 2nd float from sum2floats into hi first float
+
+	const __m128 sum = _mm_add_ss(lo, hi); // add single floats in first positions
+	return _mm_cvtss_f32(sum);
 }
 double mm256_hadd_pd_fast(__m256d x) {
 	const __m128d hi2doubles = _mm256_extractf128_pd(x, 1);
@@ -120,99 +114,99 @@ double mm256_hadd_pd_fast(__m256d x) {
 	return _mm_cvtsd_f64(sum);
 }
 
-/*
-	YMM Maximum Packed Single-Precision Floating Point Vector Maximum
-	Calculates the maximum value of a vector of floats using AVX instructions.
-	In theory, this is what `*std::max_element(values.begin(), values.end())` 
-	should be vectorised into, but because auto-vectorisation is being a bit
-	wonky, a manually vectorised version is provided here.
-*/
 float mm256_max_ps_vector(const std::vector<float>& v) {
-    if (v.empty()) return -std::numeric_limits<float>::infinity();
+	if (v.empty())
+		return -std::numeric_limits<float>::infinity();
 
-    size_t size = v.size();
-    size_t i = 0;
+	size_t size = v.size();
+	size_t i = 0;
 
-    __m256 max_vec;
-    if (size >= 8) {
-        max_vec = _mm256_loadu_ps(&v[0]);
-        i = 8;
-    } else {
-        return *std::max_element(v.begin(), v.end());
-    }
-
-    // Process chunks of 8 floats
-    for (; i + 7 < size; i += 8) {
-        __m256 curr = _mm256_loadu_ps(&v[i]);
-        max_vec = _mm256_max_ps(max_vec, curr);
-    }
-
-    // Horizontal reduction in registers
-    __m128 hi = _mm256_extractf128_ps(max_vec, 1); // high 128 bits
-    __m128 lo = _mm256_castps256_ps128(max_vec);   // low 128 bits
-    __m128 max128 = _mm_max_ps(lo, hi);            // compare low/high halves
-
-    // further reduce 128-bit vector to single float
-    max128 = _mm_max_ps(max128, _mm_movehl_ps(max128, max128));
-    max128 = _mm_max_ss(max128, _mm_shuffle_ps(max128, max128, 1));
-
-    float max_val = _mm_cvtss_f32(max128);
-
-    // Handle remaining elements
-    for (; i < size; ++i) {
-        max_val = std::max(max_val, v[i]);
-    }
-
-    return max_val;
-}
-double mm256_max_pd_vector(const std::vector<double>& v) {
-    if (v.empty()) return -std::numeric_limits<double>::infinity();
-
-    size_t size = v.size();
-    size_t i = 0;
-
-    if (size < 4) {
+	__m256 max_vec;
+	if (size >= 8) {
+		max_vec = _mm256_loadu_ps(&v[0]);
+		i = 8;
+	} else {
 		return *std::max_element(v.begin(), v.end());
 	}
-    __m256d max_vec = _mm256_loadu_pd(&v[0]);
-    i = 4;
-   
-    // Process chunks of 4 doubles
-    for (; i + 3 < size; i += 4) {
-        __m256d curr = _mm256_loadu_pd(&v[i]);
-        max_vec = _mm256_max_pd(max_vec, curr);
-    }
 
-    // Horizontal reduction in registers
-    __m128d hi = _mm256_extractf128_pd(max_vec, 1); // high 128 bits
-    __m128d lo = _mm256_castpd256_pd128(max_vec);   // low 128 bits
-    __m128d max128 = _mm_max_pd(lo, hi);            // compare low/high halves
+	// Process chunks of 8 floats
+	for (; i + 7 < size; i += 8) {
+		__m256 curr = _mm256_loadu_ps(&v[i]);
+		max_vec = _mm256_max_ps(max_vec, curr);
+	}
 
-    // further reduce 128-bit vector to single float
-    double a = _mm_cvtsd_f64(max128);
+	// Horizontal reduction in registers
+	__m128 hi = _mm256_extractf128_ps(max_vec, 1); // high 128 bits
+	__m128 lo = _mm256_castps256_ps128(max_vec);   // low 128 bits
+	__m128 max128 = _mm_max_ps(lo, hi);            // compare low/high halves
+
+	// further reduce 128-bit vector to single float
+	max128 = _mm_max_ps(max128, _mm_movehl_ps(max128, max128));
+	max128 = _mm_max_ss(max128, _mm_shuffle_ps(max128, max128, 1));
+
+	float max_val = _mm_cvtss_f32(max128);
+
+	// Handle remaining elements
+	for (; i < size; ++i) {
+		max_val = std::max(max_val, v[i]);
+	}
+
+	return max_val;
+}
+double mm256_max_pd_vector(const std::vector<double>& v) {
+	if (v.empty())
+		return -std::numeric_limits<double>::infinity();
+
+	size_t size = v.size();
+	size_t i = 0;
+
+	if (size < 4) {
+		return *std::max_element(v.begin(), v.end());
+	}
+	__m256d max_vec = _mm256_loadu_pd(&v[0]);
+	i = 4;
+
+	// Process chunks of 4 doubles
+	for (; i + 3 < size; i += 4) {
+		__m256d curr = _mm256_loadu_pd(&v[i]);
+		max_vec = _mm256_max_pd(max_vec, curr);
+	}
+
+	// Horizontal reduction in registers
+	__m128d hi = _mm256_extractf128_pd(max_vec, 1); // high 128 bits
+	__m128d lo = _mm256_castpd256_pd128(max_vec);   // low 128 bits
+	__m128d max128 = _mm_max_pd(lo, hi);            // compare low/high halves
+
+	// further reduce 128-bit vector to single float
+	double a = _mm_cvtsd_f64(max128);
 	max128 = _mm_shuffle_pd(max128, max128, 0);
 	double b = _mm_cvtsd_f64(max128);
 
-    double max_val = a > b ? a : b;
+	double max_val = a > b ? a : b;
 
-    // Handle remaining elements
-    for (; i < size; ++i) {
-        max_val = std::max(max_val, v[i]);
-    }
+	// Handle remaining elements
+	for (; i < size; ++i) {
+		max_val = std::max(max_val, v[i]);
+	}
 
-    return max_val;
+	return max_val;
 }
 #endif
 
 /*
-	Generalised matrix vector product for any compatible size matrix and vector
+    Generalised matrix vector product for any compatible size matrix and vector
 
-	mat = [m1_1, m1_2, m1_3, ...; m2_1, m2_2, m2_3, ...; m3_1, m3_2, m3_3, ...; ...]
-	vec = [x1, x2, x3, ...]
-	return = [m1_1*x1 + m1_2*x2 + m1_3*x3 + ..., m2_1*x1 + m2_2*x2 + m2_3*x3 + ..., m3_1*x1 + m3_2*x2 + m3_3*x3 + ..., ...] 
+    mat = [m1_1, m1_2, m1_3, ...; m2_1, m2_2, m2_3, ...; m3_1, m3_2, m3_3, ...; ...]
+    vec = [x1, x2, x3, ...]
+    return = [m1_1*x1 + m1_2*x2 + m1_3*x3 + ..., m2_1*x1 + m2_2*x2 + m2_3*x3 + ..., m3_1*x1 + m3_2*x2 + m3_3*x3 + ..., ...]
 */
-#if defined(USE_AVX_MAT_TIMES_VEC) && defined(__AVX__)
 Vector mat_times_vec(const Matrix& mat, const Vector& vec) {
+	Vector ret;
+	mat_times_vec(mat, vec, ret);
+	return ret;
+}
+#if defined(USE_AVX_MAT_TIMES_VEC) && defined(__AVX__)
+void mat_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
 	// Assert matrix and vector are compatible
 	assert((mat.cols() == vec.size()));
 
@@ -222,19 +216,19 @@ Vector mat_times_vec(const Matrix& mat, const Vector& vec) {
 	const number* vec_data = vec.data();
 
 	// create result vector
-	Vector result(mat.rows(), 0.0f);
-	
+	out.resize(mat.rows());
+
 	for (size_t row = 0; row < mat.rows(); row++) {
 		// zero out the accumulators
 		ymm acc0 = vecsetzero();
-		
+
 		vec_main_for(col, mat.cols()) {
 			// we only need to load this once because we reuse it across rows of the matrix
 			const ymm vecvals = vecload(vec_data + col);
-			
+
 			// load the relevant parts of the matrix
 			const ymm matvals0 = vecload(mat_data + (mat_width * (row)) + col);
-			
+
 			// _mm256_fmadd_ps multiplys the first two operands, then adds that value
 			// to the third operand and returns the value.
 			// d = _mm256_fmadd_ps(a, b, c) => d = a*b + c
@@ -248,40 +242,43 @@ Vector mat_times_vec(const Matrix& mat, const Vector& vec) {
 		vec_res_for(col, mat.cols()) {
 			val0 += mat_data[mat_width * (row) + col] * vec_data[col];
 		}
-		
+
 		// store into result
-		result(row) = val0;
+		out(row) = val0;
 	}
-	return result;
 }
 #else
-Vector mat_times_vec(const Matrix &mat, const Vector &vec) {
+void mat_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
 	assert((mat.cols() == vec.size()));
-	Vector result(mat.rows(), 0.0);
+	out.resize(mat.rows());
 	for (size_t row = 0; row < mat.rows(); ++row) {
 		number sum = 0.0;
 		for (size_t col = 0; col < mat.cols(); ++col) {
 			sum += mat(row, col) * vec(col);
 		}
-		result(row) = sum;
+		out(row) = sum;
 	}
-	return result;
 }
 #endif
 
 /*
-	Generalised matrix transpose vector product for any compatible size matrix and vector
+    Generalised matrix transpose vector product for any compatible size matrix and vector
 
-	mat = [m1_1, m1_2, m1_3, ...; m2_1, m2_2, m2_3, ...; m3_1, m3_2, m3_3, ...; ...]
-	vec = [x1, x2, x3, ...]
-	return = [m1_1*x1 + m2_1*x2 + m3_1*x3 + ..., m1_2*x1 + m2_2*x2 + m3_2*x3 + ..., m1_3*x1 + m2_3*x2 + m3_3*x3 + ..., ...] 
+    mat = [m1_1, m1_2, m1_3, ...; m2_1, m2_2, m2_3, ...; m3_1, m3_2, m3_3, ...; ...]
+    vec = [x1, x2, x3, ...]
+    return = [m1_1*x1 + m2_1*x2 + m3_1*x3 + ..., m1_2*x1 + m2_2*x2 + m3_2*x3 + ..., m1_3*x1 + m2_3*x2 + m3_3*x3 + ..., ...]
 */
-#if defined(USE_AVX_MAT_TRANSPOSE_TIMES_VEC) && defined(__AVX__)
 Vector mat_transpose_times_vec(const Matrix& mat, const Vector& vec) {
-	assert(mat.rows() == vec.size());
-	Vector result(mat.cols(), 0.0f);
+	Vector ret;
+	mat_transpose_times_vec(mat, vec, ret);
+	return ret;
+}
+#if defined(USE_AVX_MAT_TRANSPOSE_TIMES_VEC) && defined(__AVX__)
+void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
+	assert((mat.rows() == vec.size()));
+	out.resize(mat.cols());
 
-	number* result_ptr = result.data();
+	number* result_ptr = out.data();
 	const number* mat_ptr = mat.data();
 	const number* vec_ptr = vec.data();
 
@@ -290,7 +287,7 @@ Vector mat_transpose_times_vec(const Matrix& mat, const Vector& vec) {
 
 	for (size_t row = 0; row < rows; ++row) {
 		const ymm vec_elem = vecsetvalue(vec_ptr[row]);
-		
+
 		vec_main_for(col, cols) {
 			const ymm result_8 = vecload(result_ptr + col);
 			const ymm mat_8 = vecload(mat_ptr + row * cols + col);
@@ -298,47 +295,85 @@ Vector mat_transpose_times_vec(const Matrix& mat, const Vector& vec) {
 			vecstore(result_ptr + col, res_8);
 		}
 		vec_res_for(col, cols) {
-			result(col) += mat(row,col) * vec_ptr[row];
+			out(col) += mat(row, col) * vec_ptr[row];
 		}
 	}
-	return result;
 }
 #else
-Vector mat_transpose_times_vec(const Matrix& mat, const Vector& vec) {
-	assert(mat.rows() == vec.size());
-	Vector result(mat.cols(), 0.0f);
+void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
+	assert((mat.rows() == vec.size()));
+	out.resize(mat.cols());
 
 	size_t rows = mat.rows();
 	size_t cols = mat.cols();
 
 	for (size_t row = 0; row < rows; ++row) {
 		for (size_t col = 0; col < cols; ++col) {
-			result(col) += mat(row,col) * vec(row);
+			out(col) += mat(row, col) * vec(row);
 		}
 	}
-	return result;
+}
+#endif
+
+Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2) {
+	Matrix ret(mat1.rows(), mat1.cols());
+	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret);
+	return ret;
+}
+#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
+
+	size_t elems = mat1.rows() * mat1.cols();
+
+	vec_main_for(cur, elems) {
+		ymm a = vecload(mat1.data() + cur);
+		ymm b = vecload(mat2.data() + cur);
+		ymm r = vecadd(a, b);
+		vecstore(out.data() + cur, r);
+	}
+	vec_res_for(cur, elems) {
+		out.data()[cur] = mat1.data()[cur] + mat2.data()[cur];
+	}
+}
+#else
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
+	size_t elems = mat1.rows() * mat1.cols();
+	number* mat1_data = mat1.data();
+	number* mat2_data = mat2.data();
+	number* out_data = out.data();
+
+	for (size_t i = 0; i < elems; i++) {
+		out_data[i] = mat1_data[i] + mat2_data[i];
+	}
 }
 #endif
 
 /*
-	Vector Addition
+    Vector Addition
 
-	vec1 = [u1, u2, u3, ...]
-	vec2 = [v1, v2, v3, ...]
-	return = [u1+v1, u2+v2, u3+v3, ...]
+    vec1 = [u1, u2, u3, ...]
+    vec2 = [v1, v2, v3, ...]
+    return = [u1+v1, u2+v2, u3+v3, ...]
 */
+Vector vec_plus_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	vec_plus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
 #if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
-Vector vec_plus_vec(const Vector &vec1, const Vector &vec2) {
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert(vec1.size() == vec2.size());
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
-	Vector result(vec1.size());
+	out.resize(vec1.size());
 
 	// store sizes and pointers immediately to negate cost of load from class if compiler does not inline
 	const number* vec1_ptr = vec1.data();
 	const number* vec2_ptr = vec2.data();
-	number* res_ptr = result.data();
+	number* res_ptr = out.data();
 
 	// add elements 8 at a time
 	vec_main_for(elem, vec1.size()) {
@@ -352,39 +387,41 @@ Vector vec_plus_vec(const Vector &vec1, const Vector &vec2) {
 	vec_res_for(elem, vec1.size()) {
 		res_ptr[elem] = vec1_ptr[elem] + vec2_ptr[elem];
 	}
-
-
-	return result;
 }
 #else
-Vector vec_plus_vec(const Vector &vec1, const Vector &vec2) {
-	Vector result(vec1.size());
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()))
+	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
-		result(i) = vec1(i) + vec2(i);
+		out(i) = vec1(i) + vec2(i);
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Subtraction
+    Vector Subtraction
 
-	vec1 = [u1, u2, u3, ...]
-	vec2 = [v1, v2, v3, ...]
-	return = [u1-v1, u2-v2, u3-v3, ...]
+    vec1 = [u1, u2, u3, ...]
+    vec2 = [v1, v2, v3, ...]
+    return = [u1-v1, u2-v2, u3-v3, ...]
 */
+Vector vec_minus_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	vec_minus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
 #if defined(USE_AVX_VEC_MINUS_VEC) && defined(__AVX__)
-Vector vec_minus_vec(const Vector &vec1, const Vector &vec2) {
+void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert(vec1.size() == vec2.size());
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
-	Vector result(vec1.size());
-	
+	out.resize(vec1.size());
+
 	// store sizes and pointers immediately to negate cost of load from class if compiler does not inline
 	const number* vec1_ptr = vec1.data();
 	const number* vec2_ptr = vec2.data();
-	number* res_ptr = result.data();
+	number* res_ptr = out.data();
 
 	// subtract elements 8 at a time
 	vec_main_for(elem, vec1.size()) {
@@ -398,38 +435,41 @@ Vector vec_minus_vec(const Vector &vec1, const Vector &vec2) {
 	vec_res_for(elem, vec1.size()) {
 		res_ptr[elem] = vec1_ptr[elem] - vec2_ptr[elem];
 	}
-
-	return result;
 }
 #else
-Vector vec_minus_vec(const Vector &vec1, const Vector &vec2) {
-	Vector result(vec1.size());
+void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
-		result(i) = vec1(i) - vec2(i);
+		out(i) = vec1(i) - vec2(i);
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Elementwise Multiplication
+    Vector Elementwise Multiplication
 
-	vec1 = [u1, u2, u3, ...]
-	vec2 = [v1, v2, v3, ...]
-	return = [u1*v1, u2*v2, u3*v3, ...]
+    vec1 = [u1, u2, u3, ...]
+    vec2 = [v1, v2, v3, ...]
+    return = [u1*v1, u2*v2, u3*v3, ...]
 */
+Vector multiply_elementwise_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	multiply_elementwise_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
 #if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
-Vector multiply_elementwise_vec(const Vector &vec1, const Vector &vec2) {
+void multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
-	assert(vec1.size() == vec2.size());
+	assert((vec1.size() == vec2.size()));
 
 	// create result vector
-	Vector result(vec1.size());
+	out.resize(vec1.size());
 
 	// store sizes and pointers immediately to negate cost of load from class if compiler does not inline
 	const number* vec1_ptr = vec1.data();
 	const number* vec2_ptr = vec2.data();
-	number* res_ptr = result.data();
+	number* res_ptr = out.data();
 
 	// multiply elements 8 at a time
 	vec_main_for(elem, vec1.size()) {
@@ -443,29 +483,75 @@ Vector multiply_elementwise_vec(const Vector &vec1, const Vector &vec2) {
 	vec_res_for(elem, vec1.size()) {
 		res_ptr[elem] = vec1_ptr[elem] * vec2_ptr[elem];
 	}
-
-	return result;
 }
 #else
-Vector multiply_elementwise_vec(const Vector &vec1, const Vector &vec2) {
-	Vector result(vec1.size());
+void multiply_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
-		result(i) = vec1(i) * vec2(i);
+		out(i) = vec1(i) * vec2(i);
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Elementwise Sigmoid
+    Vector Elementwise Division
 
-	vec = [x1, x2, x3, ...]
-	return = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
+    vec1 = [u1, u2, u3, ...]
+    vec2 = [v1, v2, v3, ...]
+    return = [u1/v1, u2/v2, u3/v3, ...]
 */
-#if defined(USE_AVX_SIGMOID_VEC) && defined(__AVX__)
+Vector divide_elementwise_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	divide_elementwise_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
+#if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
+void divide_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+
+	out.resize(vec1.size());
+
+	const number* vec1_ptr = vec1.data();
+	const number* vec2_ptr = vec2.data();
+	number* res_ptr = out.data();
+
+	vec_main_for(elem, vec1.size()) {
+		const ymm a = vecload(vec1_ptr + elem);
+		const ymm b = vecload(vec2_ptr + elem);
+		const ymm res = vecdiv(a, b);
+		vecstore(res_ptr + elem, res);
+	}
+
+	vec_res_for(elem, vec1.size()) {
+		res_ptr[elem] = vec1_ptr[elem] / vec2_ptr[elem];
+	}
+}
+#else
+void divide_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
+	assert((vec1.size() == vec2.size()));
+	out.resize(vec1.size());
+	for (size_t i = 0; i < vec1.size(); ++i) {
+		out(i) = vec1(i) / vec2(i);
+	}
+}
+#endif
+
+/*
+    Vector Elementwise Sigmoid
+
+    vec = [x1, x2, x3, ...]
+    return = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
+*/
 Vector sigmoid_vec(const Vector& vec) {
+	Vector ret;
+	sigmoid_vec(const_cast<Vector&>(vec), ret);
+	return ret;
+}
+#if defined(USE_AVX_SIGMOID_VEC) && defined(__AVX__)
+void sigmoid_vec(Vector& vec, Vector& out) {
 	// create result vector
-	Vector result(vec.size());
+	out.resize(vec.size());
 
 	// process floats 8 at a time
 	vec_main_for(cur, vec.size()) {
@@ -483,47 +569,50 @@ Vector sigmoid_vec(const Vector& vec) {
 		vec_8 = vecadd(one, vec_8);
 		vec_8 = vecdiv(one, vec_8);
 
-		//store back into result vector
-		vecstore(result.data() + cur, vec_8);
+		// store back into result vector
+		vecstore(out.data() + cur, vec_8);
 	}
 
 	// handle residual computations
 	vec_res_for(cur, vec.size()) {
-        result(cur) = 1.0 / (1.0 + std::exp(-vec(cur)));
-    }
-	return result;
+		out(cur) = 1.0 / (1.0 + std::exp(-vec(cur)));
+	}
 }
 #else
-Vector sigmoid_vec(const Vector& vec) {
-	Vector result(vec.size());
+void sigmoid_vec(Vector& vec, Vector& out) {
+	out.resize(vec.size());
 	for (size_t i = 0; i < vec.size(); ++i) {
-		result(i) = 1.0 / (1.0 + std::exp(-vec(i)));
+		out(i) = 1.0 / (1.0 + std::exp(-vec(i)));
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Elementwise Softmax
-	vec = [x1, x2, x3, ...]
-	inter = [exp(x1 - max(vec)), exp(x2 - max(vec)), exp(x3 - max(vec)), ...]
-	return = [i1 / sum(inter), i2 / sum(inter), i3 / sum(inter)]
+    Vector Elementwise Softmax
+    vec = [x1, x2, x3, ...]
+    inter = [exp(x1 - max(vec)), exp(x2 - max(vec)), exp(x3 - max(vec)), ...]
+    return = [i1 / sum(inter), i2 / sum(inter), i3 / sum(inter)]
 */
-#if defined(USE_AVX_SOFTMAX_VEC) && defined(__AVX__)
 Vector softmax_vec(const Vector& vec) {
+	Vector ret;
+	softmax_vec(const_cast<Vector&>(vec), ret);
+	return ret;
+}
+#if defined(USE_AVX_SOFTMAX_VEC) && defined(__AVX__)
+void softmax_vec(Vector& vec, Vector& out) {
 	// make result vector
-	Vector result(vec.size());
-	
+	out.resize(vec.size());
+
 	// get maximum value
 	number max_val = vecmax(vec);
 
 	// store pointers immediately to negate cost of load from class if compiler does not inline
-	number* result_ptr = result.data();
+	number* result_ptr = out.data();
 	const number* vec_ptr = vec.data();
 
 	// zero out accumulator
 	ymm acc = vecsetzero();
-	
+
 	vec_main_for(cur, vec.size()) {
 		ymm max_val_avx = vecsetvalue(max_val);
 		ymm vec_avx = vecload(vec_ptr + cur);
@@ -538,7 +627,7 @@ Vector softmax_vec(const Vector& vec) {
 		result_ptr[cur] = res;
 		sum += res;
 	}
-	
+
 	// element-wise division
 	vec_main_for(cur, vec.size()) {
 		ymm sum_avx = vecsetvalue(sum);
@@ -549,45 +638,47 @@ Vector softmax_vec(const Vector& vec) {
 	vec_res_for(cur, vec.size()) {
 		result_ptr[cur] = result_ptr[cur] / sum;
 	}
-	return result;
 }
 #else
-Vector softmax_vec(const Vector &vec) {
-	Vector result(vec.size());
+void softmax_vec(Vector& vec, Vector& out) {
+	out.resize(vec.size());
 	number max_val = *(std::max_element(result.begin(), result.end()));
 
-	number* __restrict result_ptr = result.data();
-	const number* __restrict vec_ptr = vec.data();
+	number* result_ptr = out.data();
+	const number* vec_ptr = vec.data();
 
-	//#pragma omp simd
 	for (size_t i = 0; i < vec.size(); ++i) {
 		result_ptr[i] = exp(vec_ptr[i] - max_val);
 	}
 	number sum = 0.0f;
-	//#pragma omp simd reduction(+:sum)
 	for (size_t i = 0; i < vec.size(); ++i) {
 		sum += result_ptr[i];
 	}
-	//#pragma omp simd
 	for (size_t i = 0; i < vec.size(); ++i) {
 		result_ptr[i] /= sum;
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Cross-Entropy Loss
+    Vector Cross-Entropy Loss
 
-	predicted = [p1, p2, p3, ...]
-	actual = [a1, a2, a3, ...]
-	return = [-a1*log(p1+1e-15f), -a2*log(p2+1e-15f), -a3*log(p3+1e-15f), ...]
+    predicted = [p1, p2, p3, ...]
+    actual = [a1, a2, a3, ...]
+    return = [-a1*log(p1+1e-15f), -a2*log(p2+1e-15f), -a3*log(p3+1e-15f), ...]
 */
-#if defined(USE_AVX_CROSS_ENTROPY_LOSS) && defined(__AVX__)
 Vector cross_entropy_loss(const Vector& predicted, const Vector& actual) {
-	// create result vector
-	Vector result(predicted.size());
+	Vector res;
+	cross_entropy_loss(const_cast<Vector&>(predicted), const_cast<Vector&>(actual), res);
+	return res;
+}
+#if defined(USE_AVX_CROSS_ENTROPY_LOSS) && defined(__AVX__)
+void cross_entropy_loss(Vector& predicted, Vector& actual, Vector& out) {
+	assert((predicted.size() == actual.size()));
 	
+	// create result vector
+	out.resize(predicted.size());
+
 	// process floats 8 at a time
 	vec_main_for(cur, predicted.size()) {
 		// load predicted values
@@ -608,63 +699,69 @@ Vector cross_entropy_loss(const Vector& predicted, const Vector& actual) {
 		ymm result_8 = vecfnmsub(actual_8, predicted_8, vecsetzero());
 
 		// store in result vector
-		vecstore(result.data() + cur, result_8);
+		vecstore(out.data() + cur, result_8);
 	}
 
 	// deal with residual calculations
 	vec_res_for(cur, predicted.size()) {
-		result(cur) = -actual(cur) * log(predicted(cur) + 1e-15f);
+		out(cur) = -actual(cur) * log(predicted(cur) + 1e-15f);
 	}
-	return result;
 }
 #else
-Vector cross_entropy_loss(const Vector &predicted, const Vector &actual) {
-	Vector result(predicted.size());
+void cross_entropy_loss(Vector& predicted, Vector& actual, Vector& out) {
+	assert(predicted.size() == actual.size());
+	out.resize(predicted.size());
 	for (size_t i = 0; i < predicted.size(); ++i) {
-		result(i) = -actual(i) * log(predicted(i) + 1e-15f); // add small value to avoid log(0)
+		out(i) = -actual(i) * log(predicted(i) + 1e-15f); // add small value to avoid log(0)
 	}
-	return result;
 }
 #endif
 
 /*
-	Matrix Transpose
-	
-	M = [m1_1, m1_2, m1_3; m2_1, m2_2, m2_3; m3_1, m3_2, m3_3]
-	return = M^T
+    Matrix Transpose
 
-	I don't really know how to vectorise this. it looks like I can
-	split this into blocks and perform a transpose on each of those.
-	However, since we only ever transpose then perform a matrix times
-	vector operation, we can just use `mat_transpose_times_vec`,
-	which is much faster
+    M = [m1_1, m1_2, m1_3; m2_1, m2_2, m2_3; m3_1, m3_2, m3_3]
+    return = M^T
+
+    I don't really know how to vectorise this. it looks like I can
+    split this into blocks and perform a transpose on each of those.
+    However, since we only ever transpose then perform a matrix times
+    vector operation, we can just use `mat_transpose_times_vec`,
+    which is much faster
 */
-Matrix transpose(const Matrix &x) {
-	assert((x.cols() != 0 && x.rows() != 0));
-	
+Matrix transpose(const Matrix& x) {
+	Matrix ret(x.cols(), x.rows());
+	transpose(x, ret);
+	return ret;
+}
+void transpose(const Matrix& x, Matrix& out) {
+	assert((x.rows() == out.cols() && x.cols() == out.rows()));
+
 	size_t rows = x.rows();
 	size_t cols = x.cols();
 
-	Matrix result(cols, rows);
 	for (size_t j = 0; j < cols; ++j) {
 		for (size_t i = 0; i < rows; ++i) {
-			result(j,i) = x(i,j);
+			out(j, i) = x(i, j);
 		}
 	}
-	return result;
 }
 
 /*
-	Vector Sigmoid Derivative (Elementwise)
+    Vector Sigmoid Derivative (Elementwise)
 
-	vec = [x1, x2, x3, ...]
-	inter = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
-	return = [inter1 - inter1^2, inter2 - inter2^2 , inter3 - inter3^2, ...]
+    vec = [x1, x2, x3, ...]
+    inter = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
+    return = [inter1 - inter1^2, inter2 - inter2^2 , inter3 - inter3^2, ...]
 */
+Vector sigmoid_derivative(const Vector& vec) {
+	Vector ret;
+	sigmoid_derivative(const_cast<Vector&>(vec), ret);
+	return ret;
+}
 #if defined(USE_AVX_SIGMOID_DERIVATIVE) && defined(__AVX__)
-Vector sigmoid_derivative(const Vector &vec) {
-	// create result vector
-	Vector result(vec.size());
+void sigmoid_derivative(Vector& vec, Vector& out) {
+	out.resize(vec.size());
 
 	// process floats 8 at a time
 	vec_main_for(cur, vec.size()) {
@@ -682,77 +779,113 @@ Vector sigmoid_derivative(const Vector &vec) {
 		vec_8 = vecadd(one, vec_8);
 		vec_8 = vecdiv(one, vec_8);
 
-		// instead of taking one away from the value and multiplying it by the value,
-		// instead square the value and negate it in one instruction and add it to the value
-		// I.E. instead of a * (1-a), do a + (0-a^2)
-		// This works because a*(1-a) = a-a^2 = a+(-a^2) = a+(0-a^2)
-		//__m256 negative_square = _mm256_fmsub_ps(vec_8, vec_8, _mm256_setzero_ps());
-		//vec_8 = _mm256_add_ps(vec_8, negative_square);
 		ymm one_minus = vecsub(vecsetvalue(1.0f), vec_8);
 		vec_8 = vecmul(vec_8, one_minus);
 
-		//store back into result vector
-		vecstore(result.data() + cur, vec_8);
+		// store back into result vector
+		vecstore(out.data() + cur, vec_8);
 	}
 
 	// handle residual computations
 	vec_res_for(cur, vec.size()) {
 		number inter = 1.0f / (1.0f + std::exp(-vec(cur)));
-		result(cur) = inter * (1.0f - inter);
+		out(cur) = inter * (1.0f - inter);
 	}
-	return result;
 }
 #else
-Vector sigmoid_derivative(const Vector &vec) {
+void sigmoid_derivative(Vector& vec, Vector& out) {
 	Vector sig = sigmoid_vec(vec);
-	Vector result(vec.size());
+	out.resize(vec.size());
 	for (size_t i = 0; i < vec.size(); ++i) {
-		result(i) = sig(i) * (1.0f - sig(i));
+		out(i) = sig(i) * (1.0f - sig(i));
 	}
-	return result;
 }
 #endif
 
 /*
-	Vector Outer Product
+    Vector Sigmoid Derivative (Elementwise)
 
-	A = [a1, a2, a3, ...]
-	B = [b1, b2, b3, ...]
-	return = [a1*b1, a1*b2, a1*b3, ...; a2*b1, a2*b2, a2*b3, ...; a3*b1, a3*b2, a3*b3, ...; ...]
+    vec = [1/(1+exp(-x1)), 1/(1+exp(-x2)), 1/(1+exp(-x3)), ...]
+    return = [vec1(1-vec1), vec2(1-vec2), vec3(1-vec3), ...]
 */
+Vector precomputed_sigmoid_derivative(const Vector& vec) {
+	Vector ret;
+	precomputed_sigmoid_derivative(const_cast<Vector&>(vec), ret);
+	return ret;
+}
+#if defined(USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE) && defined(__AVX__)
+void precomputed_sigmoid_derivative(Vector& vec, Vector& out) {
+	out.resize(vec.size());
+
+	// process floats 8 at a time
+	vec_main_for(cur, vec.size()) {
+		ymm vec_8 = vecload(vec.data() + cur);
+
+		ymm one_minus = vecsub(vecsetvalue(1.0), vec_8);
+		vec_8 = vecmul(vec_8, one_minus);
+
+		// store back into result vector
+		vecstore(out.data() + cur, vec_8);
+	}
+
+	// handle residual computations
+	vec_res_for(cur, vec.size()) {
+		out(cur) = vec(cur) * (1.0f - vec(cur));
+	}
+}
+#else
+void precomputed_sigmoid_derivative(Vector& vec, Vector& out) {
+	out.resize(vec.size());
+	for (size_t i = 0; i < vec.size(); ++i) {
+		out(i) = vec(i) * (1.0f - vec(i));
+	}
+}
+#endif
+
+/*
+    Vector Outer Product
+
+    A = [a1, a2, a3, ...]
+    B = [b1, b2, b3, ...]
+    return = [a1*b1, a1*b2, a1*b3, ...; a2*b1, a2*b2, a2*b3, ...; a3*b1, a3*b2, a3*b3, ...; ...]
+*/
+Matrix outer_product(const Vector& a, const Vector& b) {
+	Matrix ret(a.size(), b.size());
+	outer_product(a, b, ret);
+	return ret;
+}
 #if defined(USE_AVX_OUTER_PRODUCT) && defined(__AVX__)
-Matrix outer_product(const Vector &a, const Vector &b) {
+void outer_product(const Vector& a, const Vector& b, Matrix& out) {
+	assert((out.rows() == a.size() && out.cols() == b.size()));
+	
 	size_t rows = a.size();
 	size_t cols = b.size();
 	const number* a_ptr = a.data();
 	const number* b_ptr = b.data();
 
-	Matrix out(rows, cols);
-
 	number* out_ptr = out.data();
 
 	for (size_t row = 0; row < rows; ++row) {
 		const ymm a_vec = vecsetvalue(a_ptr[row]);
-		
+
 		vec_main_for(col, cols) {
 			const ymm b_vec = vecload(b_ptr + col);
 			const ymm out_vec = vecmul(a_vec, b_vec);
 			vecstore(out_ptr + row * cols + col, out_vec);
 		}
 		vec_res_for(col, cols) {
-			out(row,col) = a(row) * b(col);
+			out(row, col) = a(row) * b(col);
 		}
 	}
-	return out;
 }
 #else
-Matrix outer_product(const Vector &a, const Vector &b) {
+void outer_product(const Vector& a, const Vector& b, Matrix& out) {
+	assert((out.rows() == a.size() && out.cols() == b.size()))
 	size_t m = a.size();
 	size_t n = b.size();
-	Matrix out(m, n, 0.0f);
 	for (size_t i = 0; i < m; ++i) {
 		for (size_t j = 0; j < n; ++j) {
-			out(i,j) = a(i) * b(j);
+			out(i, j) = a(i) * b(j);
 		}
 	}
 	return out;
