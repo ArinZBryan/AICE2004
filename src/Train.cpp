@@ -62,8 +62,8 @@ class ParallelTrainBody {
 		vec_plus_vec(result.cse_delta, const_cast<Vector&>(other.result.cse_delta), result.cse_delta);
 	}
 
-	ParallelTrainBody(const std::vector<Sample> samples, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, const size_t hidden_size)
-	    : samples(samples.data()),
+	ParallelTrainBody(const Sample* samples, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, const size_t hidden_size)
+	    : samples(samples),
 	      weight1(weight1),
 	      weight2(weight2),
 	      bias1(bias1),
@@ -93,7 +93,9 @@ std::vector<float> train_model_mini_batch_parallel(Network& model, const std::ve
 			size_t batch_begin = batch * config.batch_size;
 			size_t batch_end = std::min(batch_begin + config.batch_size, data.size());
 
-			ParallelTrainBody ptb(data, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
+			const Sample* samples_ptr = data.data();
+
+			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
 			tbb::parallel_reduce(tbb::blocked_range<size_t>(batch_begin, batch_end), ptb);
 
 			model.update(config.learning_rate, ptb.result);
