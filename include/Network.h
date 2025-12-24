@@ -2,27 +2,27 @@
 
 #include "DataLoader.h"
 #include "Maths.h"
-#include "Vector.h"
 #include "Matrix.h"
+#include "Vector.h"
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <random>
 #include <string>
 #include <vector>
-#include <cstddef>
 
 class Network {
   public:
 	// Fashion-MNIST dimensions
-	static constexpr const int INPUT_SIZE  = 784;
+	static constexpr const int INPUT_SIZE = 784;
 	static constexpr const int OUTPUT_SIZE = 10;
 
 	Network(unsigned int hidden_size, unsigned int seed);
 	~Network();
 
 	// Inference
-	int predict(const Vector &input);
-	int predict(const std::vector<float> &input);
+	int predict(const Vector& input);
+	int predict(const std::vector<float>& input);
 
 	// Training
 	struct TrainResult {
@@ -32,25 +32,32 @@ class Network {
 		Vector bias2_grad;
 		Vector cse_delta;
 	};
-	Vector forward(const Vector &input);
-	static TrainResult train(const Vector& input, const Vector& target, const std::vector<Matrix>& weights, const std::vector<Vector>& bias);
+	Vector forward(const Vector& input);
+	static void train(const Vector& input, const Vector& target, const Matrix* weight0, const Matrix* weight1, const Vector* bias0, const Vector* bias1, TrainResult& out);
 	void update(float learning_rate, const TrainResult& result);
 
-
 	// Getters
-	const std::vector<Matrix> &get_weights() const {
-		return weights;
+	constexpr const Matrix& get_weight(size_t i) const {
+		if (i == 1) {
+			return weight1;
+		} else {
+			return weight2;
+		}
 	}
-	const std::vector<Vector> &get_bias() const {
-		return bias;
+	constexpr const Vector& get_bias(size_t i) const {
+		if (i == 1) {
+			return bias1;
+		} else {
+			return bias2;
+		}
 	}
 
-	void save_weights(const std::string &path) const;
+	void save_weights(const std::string& path) const;
 
 	// DO NOT USE OUTSIDE OF THE TESTING ENVIRONMENT
-	struct state { 
+	struct state {
 		Network& network;
-		void (Network::* func_xavier)(Matrix&, int, int);
+		void (Network::*func_xavier)(Matrix&, int, int);
 		const unsigned int& hidden_size;
 		const unsigned int& random_seed;
 		const std::vector<Matrix>& weights;
@@ -65,11 +72,12 @@ class Network {
 	// only acceptable to use this in tests, where private member variables and
 	// functions are needed to test the class.
 
-
   private:
-	void xavier_initialization(Matrix &W, int in_dim, int out_dim);
+	void xavier_initialization(Matrix& W, int in_dim, int out_dim);
 	unsigned int hidden_size;
 	unsigned int random_seed;
-	std::vector<Matrix> weights;
-	std::vector<Vector> bias;
+	Matrix weight1;
+	Matrix weight2;
+	Vector bias1;
+	Vector bias2;
 };
