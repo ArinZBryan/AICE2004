@@ -22,7 +22,7 @@ if [ "$1" == "main" ]; then
         cmake --build build/main/release --target main -j12;
     elif [ "$2" == "--debug" ]; then
         if [ ! -d build/main/debug ]; then mkdir build/main/debug; fi
-        cmake -S . -B build/main/debug -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O0 -g";
+        cmake -S . -B build/main/debug -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O0 -g -fno-omit-frame-pointer";
         cmake --build build/main/debug --target main -j12;
     elif [ "$2" == "--profile" ]; then
         if [ ! -d build/main/profile ]; then mkdir build/main/profile; fi
