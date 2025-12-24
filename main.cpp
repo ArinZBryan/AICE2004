@@ -127,16 +127,22 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_instance);
 
 	TrainConfig config;
-	std::variant<TrainConfig, int> configresult;
+	int good = 0;
 	if (mpi_instance == 0) {
-		configresult = configure(argc, argv);
+		auto cresult = configure(argc, argv);
+		if (TrainConfig* tc = std::get_if<TrainConfig>(&cresult)) {
+			config = *tc;
+		} else {
+			good = std::get<int>(cresult);
+		}
 	}
-	if (const int* errcode = std::get_if<int>(&configresult)) {
+	if (good != 0) { 
 		MPI_Finalize();
-		return *errcode;
+		return good;
 	} else {
-		config = std::get<TrainConfig>(configresult);
+		MPI_Bcast(&config, sizeof(TrainConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
 	}
+
 
 	// Create DataLoader instance
 	DataLoader loader;
@@ -168,7 +174,8 @@ int main(int argc, char* argv[]) {
 	if (mpi_instance == 0) { 
 		std::cout << "[Training]" << std::endl;
 	}
-	
+
+	MPI_Barrier(MPI_COMM_WORLD);
 	train_model(net, train_data, config, &cross_entropy_losses);
 
 	// Evaluate the trained model only on the main process

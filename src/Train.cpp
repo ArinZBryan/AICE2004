@@ -4,6 +4,7 @@
 #include "DataType.h"
 
 #include <cstddef>
+#include <iostream>
 #include <oneapi/tbb.h>
 #include <mpi.h>
 
@@ -11,7 +12,7 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 	int mpi_proc, mpi_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc);
-	
+
 	for (size_t epoch = 0; epoch < config.epochs; ++epoch) {
 		Vector cse_epoch(10);
 		size_t num_batches = std::ceil(static_cast<float>(data.size()) / static_cast<float>(config.batch_size));
@@ -361,14 +362,28 @@ void train_model(Network& model, const std::vector<Sample>& data, const TrainCon
 
 	switch (features)
 	{
-		case MPI_DISABLED | TBB_DISABLED | BATCHING_DISABLED : train_model_stochastic(model, data, config, loss_curve_out); break;
-		case MPI_DISABLED | TBB_DISABLED | BATCHING_ENABLED  : train_model_mini_batch(model, data, config, loss_curve_out); break;
-		case MPI_DISABLED | TBB_ENABLED  | BATCHING_DISABLED : train_model_stochastic(model, data, config, loss_curve_out); break;
-		case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED  : train_model_mini_batch_tbb(model, data, config, loss_curve_out); break;
-		case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED : break;
-		case MPI_ENABLED  | TBB_DISABLED | BATCHING_ENABLED  : train_model_mini_batch_mpi(model, data, config, loss_curve_out); break;
-		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED : break;
-		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED  : train_model_mini_batch_mpi_tbb(model, data, config, loss_curve_out); break;
+		case MPI_DISABLED | TBB_DISABLED | BATCHING_DISABLED: 
+			train_model_stochastic(model, data, config, loss_curve_out); 
+			break;
+		case MPI_DISABLED | TBB_DISABLED | BATCHING_ENABLED: 
+			train_model_mini_batch(model, data, config, loss_curve_out); 
+			break;
+		case MPI_DISABLED | TBB_ENABLED  | BATCHING_DISABLED: 
+			train_model_stochastic(model, data, config, loss_curve_out); 
+			break;
+		case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED: 
+			train_model_mini_batch_tbb(model, data, config, loss_curve_out); 
+			break;
+		case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED: 
+			break;
+		case MPI_ENABLED  | TBB_DISABLED | BATCHING_ENABLED: 
+			train_model_mini_batch_mpi(model, data, config, loss_curve_out);
+			break;
+		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED: 
+			break;
+		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED: 
+			train_model_mini_batch_mpi_tbb(model, data, config, loss_curve_out); 
+			break;
 	}
 }
 
