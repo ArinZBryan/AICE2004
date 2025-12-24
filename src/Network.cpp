@@ -5,19 +5,10 @@
 #include <fstream>
 #include <iomanip>
 
-Network::Network(unsigned int hidden_size, unsigned int seed) : hidden_size(hidden_size), random_seed(seed) {
-	weights = { 
-		Matrix(hidden_size, INPUT_SIZE),
-		Matrix(OUTPUT_SIZE, hidden_size)
-	};
-
-	bias = {
-	    Vector(hidden_size, 0.0f),
-	    Vector(OUTPUT_SIZE, 0.0f)
-	};
-
-	xavier_initialization(weights[0], INPUT_SIZE, hidden_size);
-	xavier_initialization(weights[1], hidden_size, OUTPUT_SIZE);
+Network::Network(unsigned int hidden_size, unsigned int seed) 
+: hidden_size(hidden_size), random_seed(seed), weight1(hidden_size, INPUT_SIZE), weight2(OUTPUT_SIZE, hidden_size), bias1(hidden_size, 0.0), bias2(OUTPUT_SIZE, 0.0) {
+	xavier_initialization(weight1, INPUT_SIZE, hidden_size);
+	xavier_initialization(weight2, hidden_size, OUTPUT_SIZE);
 }
 
 void Network::save_weights(const std::string &path) const {
@@ -37,7 +28,7 @@ void Network::save_weights(const std::string &path) const {
 	// Write W1 (hidden x INPUT_SIZE)
 	for (uint32_t i = 0; i < hidden; ++i) {
 		for (uint32_t j = 0; j < static_cast<uint32_t>(INPUT_SIZE); ++j) {
-			float v = static_cast<float>(weights[0](i,j));
+			float v = static_cast<float>(weight1(i,j));
 			ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 		}
 	}
@@ -45,20 +36,20 @@ void Network::save_weights(const std::string &path) const {
 	// Write W2 (OUTPUT_SIZE x hidden)
 	for (uint32_t i = 0; i < static_cast<uint32_t>(OUTPUT_SIZE); ++i) {
 		for (uint32_t j = 0; j < hidden; ++j) {
-			float v = static_cast<float>(weights[1](i,j));
+			float v = static_cast<float>(weight2(i,j));
 			ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 		}
 	}
 
 	// Write b1 (hidden)
 	for (uint32_t i = 0; i < hidden; ++i) {
-		float v = static_cast<float>(bias[0](i));
+		float v = static_cast<float>(bias1(i));
 		ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 	}
 
 	// Write b2 (OUTPUT_SIZE)
 	for (uint32_t i = 0; i < static_cast<uint32_t>(OUTPUT_SIZE); ++i) {
-		float v = static_cast<float>(bias[1](i));
+		float v = static_cast<float>(bias2(i));
 		ofs.write(reinterpret_cast<const char *>(&v), sizeof(v));
 	}
 
@@ -86,15 +77,15 @@ void Network::xavier_initialization(Matrix &W, int in_dim, int out_dim) {
 
 Vector Network::forward(const Vector &input) {
 	// Input to hidden: weights * input + bias
-	Vector v = mat_times_vec(weights[0], input);
-	vec_plus_vec(v, bias[0], v);
+	Vector v = mat_times_vec(weight1, input);
+	vec_plus_vec(v, bias1, v);
 
 	// Activation function: Sigmoid
 	sigmoid_vec(v, v);
 
 	// Hidden to output: weights * hidden + bias
-	Vector result = mat_times_vec(weights[1], v);
-	vec_plus_vec(result, bias[1], result);
+	Vector result = mat_times_vec(weight2, v);
+	vec_plus_vec(result, bias2, result);
 
 	// Apply softmax to get probabilities
 	softmax_vec(result, result);
@@ -102,55 +93,52 @@ Vector Network::forward(const Vector &input) {
 	return result;
 }
 
-Network::TrainResult Network::train(const Vector& input, const Vector& target, const std::vector<Matrix>& weights, const std::vector<Vector>& bias) {
+void Network::train(const Vector& input, const Vector& target, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, Network::TrainResult& out) {
 	
 	// ======================= Forward Step ========================
 	// Input->Hidden: weights * input + bias
-	Vector sigmoid = mat_times_vec(weights[0], input);
-	vec_plus_vec(sigmoid, const_cast<Vector&>(bias[0]), sigmoid);
+	Vector sigmoid = mat_times_vec(*weight1, input);
+	vec_plus_vec(sigmoid, const_cast<Vector&>(*bias1), sigmoid);
 
 	// Input->Hidden activation function
 	sigmoid_vec(sigmoid, sigmoid);
 
 	// Hidden->Output: weights * hidden + bias
-	Vector forward_output = mat_times_vec(weights[1], sigmoid);
-	vec_plus_vec(forward_output, const_cast<Vector&>(bias[1]), forward_output);
+	mat_times_vec(*weight2, sigmoid, out.bias2_grad);
+	vec_plus_vec(out.bias2_grad, const_cast<Vector&>(*bias2), out.bias2_grad);
 
 	// Output probability function
-	softmax_vec(forward_output, forward_output);
+	softmax_vec(out.bias2_grad, out.bias2_grad);
 
 	// ==================== Calculate CSE Delta ====================
-	Vector cse_delta = cross_entropy_loss(forward_output, target);
+	cross_entropy_loss(out.bias2_grad, const_cast<Vector&>(target), out.cse_delta);
 
 	// ====================== Backpropogation ======================
-	Vector& bias2_gradient = forward_output;
-	vec_minus_vec(forward_output, const_cast<Vector&>(target), bias2_gradient);
+	vec_minus_vec(out.bias2_grad, const_cast<Vector&>(target), out.bias2_grad);
 
 	// Gradient for hidden -> output weights and biases
-	Matrix weight2_gradient = outer_product(bias2_gradient, sigmoid);
+	outer_product(out.bias2_grad, sigmoid, out.weight2_grad);
 
 	// Gradient for input -> hidden weights and biases
-	Vector bias1_gradient = mat_transpose_times_vec(weights[1], bias2_gradient);
+	mat_transpose_times_vec(*weight2, out.bias2_grad, out.bias1_grad);
 	precomputed_sigmoid_derivative(sigmoid, sigmoid);
-	multiply_elementwise_vec(bias1_gradient, sigmoid, bias1_gradient);
-	Matrix weight1_gradient = outer_product(bias1_gradient, input);
-
-	return { weight1_gradient, weight2_gradient, bias1_gradient, bias2_gradient, cse_delta };
+	multiply_elementwise_vec(out.bias1_grad, sigmoid, out.bias1_grad);
+	outer_product(out.bias1_grad, input, out.weight1_grad);
 }
 
 void Network::update(float learning_rate, const Network::TrainResult& result) {
 	for (size_t i = 0; i < hidden_size; i++) {
 		for (int j = 0; j < INPUT_SIZE; j++) {
-			weights[0](i,j) -= learning_rate * result.weight1_grad(i,j);
+			weight1(i,j) -= learning_rate * result.weight1_grad(i,j);
 		}
-		bias[0](i) -= learning_rate * result.bias1_grad(i);
+		bias1(i) -= learning_rate * result.bias1_grad(i);
 	}
 
 	for (int i = 0; i < Network::OUTPUT_SIZE; i++) {
 		for (size_t j = 0; j < this->hidden_size; j++) {
-			weights[1](i,j) -= learning_rate * result.weight2_grad(i,j);
+			weight2(i,j) -= learning_rate * result.weight2_grad(i,j);
 		}
-		bias[1](i) -= learning_rate * result.bias2_grad(i);
+		bias2(i) -= learning_rate * result.bias2_grad(i);
 	}
 }
 

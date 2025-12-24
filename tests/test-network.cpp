@@ -184,44 +184,41 @@ Network::state smuggle(Network& net) {
         &Network::xavier_initialization,
         net.hidden_size,
         net.random_seed,
-        net.weights,
-        net.bias
+        { net.weight1, net.weight2 },
+        { net.bias1, net.bias2 }
     };
 }
+
 
 TEST_CASE("constructor", "[Network.cpp]") {
     SECTION("1 Hidden Node") {
         Old_Network on = Old_Network(1, 1);
         Network nn = Network(1, 1);
 
-        Network::state snn = smuggle(nn);
-        REQUIRE(on.hidden_size == static_cast<int>(snn.hidden_size));
-        REQUIRE(on.random_seed == snn.random_seed);
-
-        REQUIRE(snn.weights[0].rows() == on.weights[0].size());
-        REQUIRE(snn.weights[0].cols() == on.weights[0][0].size());
-        for (size_t i = 0; i < snn.weights[0].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[0].cols(); j++) {
-                REQUIRE_THAT(on.weights[0][i][j], WithinULP(snn.weights[0](i,j), 2));
+        REQUIRE(nn.get_weight(1).rows() == on.weights[0].size());
+        REQUIRE(nn.get_weight(1).cols() == on.weights[0][0].size());
+        for (size_t i = 0; i < nn.get_weight(1).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(1).cols(); j++) {
+                REQUIRE_THAT(on.weights[0][i][j], WithinULP(nn.get_weight(1)(i,j), 2));
             }
         }
         
-        REQUIRE(snn.weights[1].rows() == on.weights[1].size());
-        REQUIRE(snn.weights[1].cols() == on.weights[1][0].size());
-        for (size_t i = 0; i < snn.weights[1].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[1].cols(); j++) {
-                REQUIRE_THAT(on.weights[1][i][j], WithinULP(snn.weights[1](i,j), 2));
+        REQUIRE(nn.get_weight(2).rows() == on.weights[1].size());
+        REQUIRE(nn.get_weight(2).cols() == on.weights[1][0].size());
+        for (size_t i = 0; i < nn.get_weight(2).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(2).cols(); j++) {
+                REQUIRE_THAT(on.weights[1][i][j], WithinULP(nn.get_weight(2)(i,j), 2));
             }
         }
 
-        REQUIRE(snn.bias[0].size() == on.bias[0].size());
-        for (size_t i = 0; i < snn.bias[0].size(); i++) {
-            REQUIRE_THAT(on.bias[0][i], WithinULP(snn.bias[0](i), 2));
+        REQUIRE(nn.get_bias(1).size() == on.bias[0].size());
+        for (size_t i = 0; i < nn.get_bias(1).size(); i++) {
+            REQUIRE_THAT(on.bias[0][i], WithinULP(nn.get_bias(1)(i), 2));
         }
 
-        REQUIRE(snn.bias[1].size() == on.bias[1].size());
-        for (size_t i = 0; i < snn.bias[1].size(); i++) {
-            REQUIRE_THAT(on.bias[1][i], WithinULP(snn.bias[1](i), 2));
+        REQUIRE(nn.get_bias(2).size() == on.bias[1].size());
+        for (size_t i = 0; i < nn.get_bias(2).size(); i++) {
+            REQUIRE_THAT(on.bias[1][i], WithinULP(nn.get_bias(2)(i), 2));
         }
 
     }
@@ -229,152 +226,61 @@ TEST_CASE("constructor", "[Network.cpp]") {
         Old_Network on = Old_Network(10, 1);
         Network nn = Network(10, 1);
 
-        Network::state snn = smuggle(nn);
-        REQUIRE(on.hidden_size == static_cast<int>(snn.hidden_size));
-        REQUIRE(on.random_seed == snn.random_seed);
-
-        REQUIRE(snn.weights[0].rows() == on.weights[0].size());
-        REQUIRE(snn.weights[0].cols() == on.weights[0][0].size());
-        for (size_t i = 0; i < snn.weights[0].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[0].cols(); j++) {
-                REQUIRE_THAT(on.weights[0][i][j], WithinULP(snn.weights[0](i,j), 2));
+        REQUIRE(nn.get_weight(1).rows() == on.weights[0].size());
+        REQUIRE(nn.get_weight(1).cols() == on.weights[0][0].size());
+        for (size_t i = 0; i < nn.get_weight(1).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(1).cols(); j++) {
+                REQUIRE_THAT(on.weights[0][i][j], WithinULP(nn.get_weight(1)(i,j), 2));
             }
         }
         
-        REQUIRE(snn.weights[1].rows() == on.weights[1].size());
-        REQUIRE(snn.weights[1].cols() == on.weights[1][0].size());
-        for (size_t i = 0; i < snn.weights[1].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[1].cols(); j++) {
-                REQUIRE_THAT(on.weights[1][i][j], WithinULP(snn.weights[1](i,j), 2));
+        REQUIRE(nn.get_weight(2).rows() == on.weights[1].size());
+        REQUIRE(nn.get_weight(2).cols() == on.weights[1][0].size());
+        for (size_t i = 0; i < nn.get_weight(2).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(2).cols(); j++) {
+                REQUIRE_THAT(on.weights[1][i][j], WithinULP(nn.get_weight(2)(i,j), 2));
             }
         }
         
-        REQUIRE(snn.bias[0].size() == on.bias[0].size());
-        for (size_t i = 0; i < snn.bias[0].size(); i++) {
-            REQUIRE_THAT(on.bias[0][i], WithinULP(snn.bias[0](i), 2));
+        REQUIRE(nn.get_bias(1).size() == on.bias[0].size());
+        for (size_t i = 0; i < nn.get_bias(1).size(); i++) {
+            REQUIRE_THAT(on.bias[0][i], WithinULP(nn.get_bias(1)(i), 2));
         }
 
-        REQUIRE(snn.bias[1].size() == on.bias[1].size());
-        for (size_t i = 0; i < snn.bias[1].size(); i++) {
-            REQUIRE_THAT(on.bias[1][i], WithinULP(snn.bias[1](i), 2));
+        REQUIRE(nn.get_bias(2).size() == on.bias[1].size());
+        for (size_t i = 0; i < nn.get_bias(2).size(); i++) {
+            REQUIRE_THAT(on.bias[1][i], WithinULP(nn.get_bias(2)(i), 2));
         }
     }
     SECTION("100 Hidden Nodes") {
         Old_Network on = Old_Network(100, 1);
         Network nn = Network(100, 1);
 
-        Network::state snn = smuggle(nn);
-        REQUIRE(on.hidden_size == static_cast<int>(snn.hidden_size));
-        REQUIRE(on.random_seed == snn.random_seed);
-
-        REQUIRE(snn.weights[0].rows() == on.weights[0].size());
-        REQUIRE(snn.weights[0].cols() == on.weights[0][0].size());
-        for (size_t i = 0; i < snn.weights[0].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[0].cols(); j++) {
-                REQUIRE_THAT(on.weights[0][i][j], WithinULP(snn.weights[0](i,j), 2));
+        REQUIRE(nn.get_weight(1).rows() == on.weights[0].size());
+        REQUIRE(nn.get_weight(1).cols() == on.weights[0][0].size());
+        for (size_t i = 0; i < nn.get_weight(1).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(1).cols(); j++) {
+                REQUIRE_THAT(on.weights[0][i][j], WithinULP(nn.get_weight(1)(i,j), 2));
             }
         }
         
-        REQUIRE(snn.weights[1].rows() == on.weights[1].size());
-        REQUIRE(snn.weights[1].cols() == on.weights[1][0].size());
-        for (size_t i = 0; i < snn.weights[1].rows(); i++) {
-            for (size_t j = 0; j < snn.weights[1].cols(); j++) {
-                REQUIRE_THAT(on.weights[1][i][j], WithinULP(snn.weights[1](i,j), 2));
+        REQUIRE(nn.get_weight(2).rows() == on.weights[1].size());
+        REQUIRE(nn.get_weight(2).cols() == on.weights[1][0].size());
+        for (size_t i = 0; i < nn.get_weight(2).rows(); i++) {
+            for (size_t j = 0; j < nn.get_weight(2).cols(); j++) {
+                REQUIRE_THAT(on.weights[1][i][j], WithinULP(nn.get_weight(2)(i,j), 2));
             }
         }
 
-        REQUIRE(snn.bias[0].size() == on.bias[0].size());
-        for (size_t i = 0; i < snn.bias[0].size(); i++) {
-            REQUIRE_THAT(on.bias[0][i], WithinULP(snn.bias[0](i), 2));
+        REQUIRE(nn.get_bias(1).size() == on.bias[0].size());
+        for (size_t i = 0; i < nn.get_bias(1).size(); i++) {
+            REQUIRE_THAT(on.bias[0][i], WithinULP(nn.get_bias(1)(i), 2));
         }
 
-        REQUIRE(snn.bias[1].size() == on.bias[1].size());
-        for (size_t i = 0; i < snn.bias[1].size(); i++) {
-            REQUIRE_THAT(on.bias[1][i], WithinULP(snn.bias[1](i), 2));
+        REQUIRE(nn.get_bias(2).size() == on.bias[1].size());
+        for (size_t i = 0; i < nn.get_bias(2).size(); i++) {
+            REQUIRE_THAT(on.bias[1][i], WithinULP(nn.get_bias(2)(i), 2));
         }        
-    }
-}
-
-TEST_CASE("xavier_initialization", "[Network.cpp]") {
-    SECTION("3x3 Matrix") {
-        Old_Network on = Old_Network(1, 1);
-        Network nn = Network(1, 1);
-
-        auto onm = std::vector<std::vector<float>>(3, std::vector<float>(3));
-        on.xavier_initialization(onm, 3, 3);
-
-        auto snn = smuggle(nn);
-        auto nnm = Matrix(3, 3);
-        (snn.network.*(snn.func_xavier))(nnm, 3, 3); //call the smuggled xavier_initialization function
-
-        REQUIRE(nnm.rows() == onm.size());
-        REQUIRE(nnm.cols() == onm[0].size());
-
-        for (size_t i = 0; i < nnm.rows(); i++) {
-            for (size_t j = 0; j < nnm.cols(); j++) {
-                REQUIRE_THAT(onm[i][j], WithinULP(nnm(i,j), 2));
-            }
-        }
-    }
-    SECTION("5x5 Matrix") {
-        Old_Network on = Old_Network(1, 1);
-        Network nn = Network(1, 1);
-
-        auto onm = std::vector<std::vector<float>>(5, std::vector<float>(5));
-        on.xavier_initialization(onm, 5, 5);
-
-        auto snn = smuggle(nn);
-        auto nnm = Matrix(5, 5);
-        (snn.network.*(snn.func_xavier))(nnm, 5, 5); //call the smuggled xavier_initialization function
-
-        REQUIRE(nnm.rows() == onm.size());
-        REQUIRE(nnm.cols() == onm[0].size());
-
-        for (size_t i = 0; i < nnm.rows(); i++) {
-            for (size_t j = 0; j < nnm.cols(); j++) {
-                REQUIRE_THAT(onm[i][j], WithinULP(nnm(i,j), 2));
-            }
-        }
-    }
-    SECTION("Larger matrix than supplied bounds") {
-        Old_Network on = Old_Network(1, 1);
-        Network nn = Network(1, 1);
-
-        auto onm = std::vector<std::vector<float>>(5, std::vector<float>(5));
-        on.xavier_initialization(onm, 3, 3);
-
-        auto snn = smuggle(nn);
-        auto nnm = Matrix(5, 5);
-        (snn.network.*(snn.func_xavier))(nnm, 3, 3); //call the smuggled xavier_initialization function
-
-        REQUIRE(nnm.rows() == onm.size());
-        REQUIRE(nnm.cols() == onm[0].size());
-
-        for (size_t i = 0; i < nnm.rows(); i++) {
-            for (size_t j = 0; j < nnm.cols(); j++) {
-                REQUIRE_THAT(onm[i][j], WithinULP(nnm(i,j), 2));
-            }
-        }
-    }
-    SECTION("Non-Square Matrix") {
-        Old_Network on = Old_Network(1, 1);
-        Network nn = Network(1, 1);
-
-        auto onm = std::vector<std::vector<float>>(20, std::vector<float>(5));
-        on.xavier_initialization(onm, 5, 20);
-
-        auto snn = smuggle(nn);
-        auto nnm = Matrix(20, 5);
-        (snn.network.*(snn.func_xavier))(nnm, 5, 20); //call the smuggled xavier_initialization function
-
-        REQUIRE(nnm.rows() == onm.size());
-        REQUIRE(nnm.cols() == onm[0].size());
-
-        for (size_t i = 0; i < nnm.rows(); i++) {
-            for (size_t j = 0; j < nnm.cols(); j++) {
-                REQUIRE_THAT(onm[i][j], WithinULP(nnm(i,j), 2));
-            }
-        }
     }
 }
 
@@ -389,19 +295,20 @@ TEST_CASE("forward", "[Network.cpp]") {
         nnv(i) = dist(gen);
     }
 
-    std::vector<float> onv = to_float_vector(nnv);
+    std::vector<float> onv = nnv;
     std::vector<float> onr = on.forward(onv);
-    std::vector<float> nnr = to_float_vector(nn.forward(nnv));
+    auto nnr = nn.forward(nnv);
 
     REQUIRE(nnr.size() == onr.size());
     for (size_t j = 0; j < nnr.size(); j++) {
-        REQUIRE_THAT(onr[j], WithinRel(nnr[j]));
+        REQUIRE_THAT(onr[j], WithinRel(nnr(j)));
     }
 }
 
 TEST_CASE("train", "[Network.cpp]") {
-    Old_Network on = Old_Network(100, 1);
-    Network nn = Network(100, 1);
+    size_t hidden_size = 100;
+    Old_Network on = Old_Network(hidden_size, 1);
+    Network nn = Network(hidden_size, 1);
     
     std::mt19937 gen = std::mt19937();
     std::uniform_real_distribution<float> dist = std::uniform_real_distribution<float>(0, 1);
@@ -412,38 +319,43 @@ TEST_CASE("train", "[Network.cpp]") {
 
     Vector label_one_hot = Vector(10, 0.0f);
     label_one_hot(0) = 1.0f;
-    on.forward(to_float_vector(nnv));
-	on.backpropagate(to_float_vector(label_one_hot), 0.1);
+    on.forward(nnv);
+	on.backpropagate(label_one_hot, 0.1);
     
-    auto tr = Network::train(nnv, label_one_hot, nn.get_weights(), nn.get_bias());
+    Network::TrainResult tr{
+        Matrix(hidden_size, Network::INPUT_SIZE),
+		Matrix(Network::OUTPUT_SIZE, hidden_size),
+		Vector(hidden_size),
+		Vector(Network::OUTPUT_SIZE),
+		Vector(10)
+    };
+    Network::train(nnv, label_one_hot, &nn.get_weight(1), &nn.get_weight(2), &nn.get_bias(1), &nn.get_bias(2), tr);
     nn.update(0.1, tr);
 
-    Network::state snn = smuggle(nn);
-
-    REQUIRE(snn.weights[0].rows() == on.weights[0].size());
-    REQUIRE(snn.weights[0].cols() == on.weights[0][0].size());
-    for (size_t i = 0; i < snn.weights[0].rows(); i++) {
-        for (size_t j = 0; j < snn.weights[0].cols(); j++) {
-            REQUIRE_THAT(on.weights[0][i][j], WithinAbs(snn.weights[0](i,j), 1e-2));
+    REQUIRE(nn.get_weight(1).rows() == on.weights[0].size());
+    REQUIRE(nn.get_weight(1).cols() == on.weights[0][0].size());
+    for (size_t i = 0; i < nn.get_weight(1).rows(); i++) {
+        for (size_t j = 0; j < nn.get_weight(1).cols(); j++) {
+            REQUIRE_THAT(on.weights[0][i][j], WithinAbs(nn.get_weight(1)(i,j), 1e-2));
         }//                                                                  
     }
         
-    REQUIRE(snn.weights[1].rows() == on.weights[1].size());
-    REQUIRE(snn.weights[1].cols() == on.weights[1][0].size());
-    for (size_t i = 0; i < snn.weights[1].rows(); i++) {
-        for (size_t j = 0; j < snn.weights[1].cols(); j++) {
-            REQUIRE_THAT(on.weights[1][i][j], WithinAbs(snn.weights[1](i,j), 1e-2));
+    REQUIRE(nn.get_weight(2).rows() == on.weights[1].size());
+    REQUIRE(nn.get_weight(2).cols() == on.weights[1][0].size());
+    for (size_t i = 0; i < nn.get_weight(2).rows(); i++) {
+        for (size_t j = 0; j < nn.get_weight(2).cols(); j++) {
+            REQUIRE_THAT(on.weights[1][i][j], WithinAbs(nn.get_weight(2)(i,j), 1e-2));
         }
     }
 
-    REQUIRE(snn.bias[0].size() == on.bias[0].size());
-    for (size_t i = 0; i < snn.bias[0].size(); i++) {
-        REQUIRE_THAT(on.bias[0][i], WithinAbs(snn.bias[0](i), 1e-2));
+    REQUIRE(nn.get_bias(1).size() == on.bias[0].size());
+    for (size_t i = 0; i < nn.get_bias(1).size(); i++) {
+        REQUIRE_THAT(on.bias[0][i], WithinAbs(nn.get_bias(1)(i), 1e-2));
     }
     
-    REQUIRE(snn.bias[1].size() == on.bias[1].size());
-    for (size_t i = 0; i < snn.bias[1].size(); i++) {
-        REQUIRE_THAT(on.bias[1][i], WithinAbs(snn.bias[1](i), 1e-2));
+    REQUIRE(nn.get_bias(2).size() == on.bias[1].size());
+    for (size_t i = 0; i < nn.get_bias(2).size(); i++) {
+        REQUIRE_THAT(on.bias[1][i], WithinAbs(nn.get_bias(2)(i), 1e-2));
     }
 }
 
@@ -451,34 +363,30 @@ TEST_CASE("predict", "[Network.cpp]") {
     Old_Network on = Old_Network(100, 1);
     Network nn = Network(100, 1);
     
-    Network::state snn = smuggle(nn);
-    REQUIRE(on.hidden_size == static_cast<int>(snn.hidden_size));
-    REQUIRE(on.random_seed == snn.random_seed);
-    
-    REQUIRE(snn.weights[0].rows() == on.weights[0].size());
-    REQUIRE(snn.weights[0].cols() == on.weights[0][0].size());
-    for (size_t i = 0; i < snn.weights[0].rows(); i++) {
-        for (size_t j = 0; j < snn.weights[0].cols(); j++) {
-            REQUIRE(on.weights[0][i][j] == snn.weights[0](i,j));
+    REQUIRE(nn.get_weight(1).rows() == on.weights[0].size());
+    REQUIRE(nn.get_weight(1).cols() == on.weights[0][0].size());
+    for (size_t i = 0; i < nn.get_weight(1).rows(); i++) {
+        for (size_t j = 0; j < nn.get_weight(1).cols(); j++) {
+            REQUIRE(on.weights[0][i][j] == nn.get_weight(1)(i,j));
         }
     }
     
-    REQUIRE(snn.weights[1].rows() == on.weights[1].size());
-    REQUIRE(snn.weights[1].cols() == on.weights[1][0].size());
-    for (size_t i = 0; i < snn.weights[1].rows(); i++) {
-        for (size_t j = 0; j < snn.weights[1].cols(); j++) {
-            REQUIRE(on.weights[1][i][j] == snn.weights[1](i,j));
+    REQUIRE(nn.get_weight(2).rows() == on.weights[1].size());
+    REQUIRE(nn.get_weight(2).cols() == on.weights[1][0].size());
+    for (size_t i = 0; i < nn.get_weight(2).rows(); i++) {
+        for (size_t j = 0; j < nn.get_weight(2).cols(); j++) {
+            REQUIRE(on.weights[1][i][j] == nn.get_weight(2)(i,j));
         }
     }
     
-    REQUIRE(snn.bias[0].size() == on.bias[0].size());
-    for (size_t i = 0; i < snn.bias[0].size(); i++) {
-        REQUIRE(on.bias[0][i] == snn.bias[0](i));
+    REQUIRE(nn.get_bias(1).size() == on.bias[0].size());
+    for (size_t i = 0; i < nn.get_bias(1).size(); i++) {
+        REQUIRE(on.bias[0][i] == nn.get_bias(1)(i));
     }
     
-    REQUIRE(snn.bias[1].size() == on.bias[1].size());
-    for (size_t i = 0; i < snn.bias[1].size(); i++) {
-        REQUIRE(on.bias[1][i] == snn.bias[1](i));
+    REQUIRE(nn.get_bias(2).size() == on.bias[1].size());
+    for (size_t i = 0; i < nn.get_bias(2).size(); i++) {
+        REQUIRE(on.bias[1][i] == nn.get_bias(2)(i));
     }
     
     //Training Sample 1
@@ -489,16 +397,10 @@ TEST_CASE("predict", "[Network.cpp]") {
         nnv(i) = dist(gen);
     }
 
-    std::vector<float> onv = to_float_vector(nnv);
+    std::vector<float> onv = nnv;
 
     int onr = on.predict(onv);
     int nnr = nn.predict(nnv);
     
     REQUIRE(onr == nnr);
 }
-
-    
-
-
-
-
