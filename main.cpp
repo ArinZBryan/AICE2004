@@ -1,6 +1,5 @@
 #include <cerrno>
 #include <cstring>
-#include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -12,14 +11,28 @@
 #include <iostream>
 #include <string>
 #include <variant>
+#include <stdexcept>
+#include <exception>
 
 #include <oneapi/tbb.h>
+#include <mpi.h>
 
 using namespace std;
 
 std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
+	constexpr char MPI_ENABLED = 0b100;
+	constexpr char TBB_ENABLED = 0b010;
+	constexpr char BATCHING_ENABLED = 0b001;
+	constexpr char MPI_DISABLED = 0, TBB_DISABLED = 0, BATCHING_DISABLED = 0;
+
 	try {
 		TrainConfig tc = parse_arguments(argc, argv);
+
+		if (tc.tasks > tc.batch_size) {
+			throw std::logic_error("Batch size must be larger than or equal to number of tasks");
+		}
+
+		unsigned char features = (tc.tasks > 1) << 2 | (tc.threads > 1) << 1 | (tc.batch_size > 1);
 
 		oneapi::tbb::global_control tbb_global_ctrl(oneapi::tbb::global_control::max_allowed_parallelism, tc.threads);
 
@@ -31,14 +44,20 @@ std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
 		std::cout << "Hidden Layer Size:\t" << tc.hidden_size << "\n";
 		std::cout << "Threads:\t\t" << tc.threads << "\n";
 		std::cout << "Tasks:\t\t\t" << tc.tasks << "\n";
-		if (tc.batch_size == 1) {
-			std::cout << "Training Method:\t" << "Stochastic" << "\n";
-		} else if (tc.threads > 1) { 
-			std::cout << "Training Method:\t" << "Mini Batch (Multi-Threaded)" << "\n";
-		} else {
-			std::cout << "Training Method:\t" << "Mini Batch (Single-Threaded)" << "\n";
+		std::cout << "Training Method:\t";
+		std::string tm;
+		switch (features)
+		{
+			case MPI_DISABLED | TBB_DISABLED | BATCHING_DISABLED : tm = "Stochastic Gradient Descent"; break;
+			case MPI_DISABLED | TBB_DISABLED | BATCHING_ENABLED  : tm = "Mini-Batch Gradient Descent"; break;
+			case MPI_DISABLED | TBB_ENABLED  | BATCHING_DISABLED : tm = "Stochastic Gradient Descent"; break;
+			case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED  : tm = "Multi-Thread Mini-Batch Gradient Descent"; break;
+			case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED : throw std::logic_error("Use of multi-processing via MPI requires batches > 1"); break;
+			case MPI_ENABLED  | TBB_DISABLED | BATCHING_ENABLED  : tm = "Multi-Process Mini-Batch Gradient Descent"; break;
+			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED : throw std::logic_error("Use of multi-processing via MPI requires batches > 1"); break;
+			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED  : tm = "Multi-Thread Multi-Process Mini-Batch Gradient Descent"; break;
 		}
-		std::cout << std::endl;
+		std::cout << tm << "\n" << std::endl;
 		return tc;
 	} catch (const std::logic_error&) {
 		// Help requested
@@ -102,8 +121,18 @@ void saveResults(const Network& net, const std::vector<int>& predictions, const 
 int main(int argc, char* argv[]) {
 
 #if true
+	MPI_Init(&argc, &argv);
+	int mpi_instance, mpi_instances;
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_instances);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_instance);
+
 	TrainConfig config;
-	if (auto configresult = configure(argc, argv); const int* errcode = std::get_if<int>(&configresult)) {
+	std::variant<TrainConfig, int> configresult;
+	if (mpi_instance == 0) {
+		configresult = configure(argc, argv);
+	}
+	if (const int* errcode = std::get_if<int>(&configresult)) {
+		MPI_Finalize();
 		return *errcode;
 	} else {
 		config = std::get<TrainConfig>(configresult);
@@ -117,37 +146,50 @@ int main(int argc, char* argv[]) {
 	// Initialise the network with parsed seed and hidden size
 	Network net = Network(config.hidden_size, config.random_seed);
 
-	// Pick a sample to demonstrate the network with
+	// Evaluate the untrained model only on the main process
 	int eval_data_index = 2;
-	std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
+	if (mpi_instance == 0) {
+		// Pick a sample to demonstrate the network with
+		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
 
-	// Print the individual sample & overall accuracy.
-	int untrained_prediction = net.predict(train_data[eval_data_index].pixels);
-	std::string untrained_prediction_string = loader.get_prediction_string(untrained_prediction);
-	std::cout << "[Untrained]" << std::endl;
-	std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << untrained_prediction_string << ", the real class is: " << real_class_string << std::endl;
-	std::vector<int> predictions = get_predictions(net, test_data);
-	float accuracy = evaluate_predictions(test_data, predictions);
-	std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
-	std::cout << std::endl;
+		// Print the individual sample & overall accuracy.
+		int untrained_prediction = net.predict(train_data[eval_data_index].pixels);
+		std::string untrained_prediction_string = loader.get_prediction_string(untrained_prediction);
+		std::cout << "[Untrained]" << std::endl;
+		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << untrained_prediction_string << ", the real class is: " << real_class_string << std::endl;
+		std::vector<int> predictions = get_predictions(net, test_data);
+		float accuracy = evaluate_predictions(test_data, predictions);
+		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
+		std::cout << std::endl;
+	}
+	
+	// Setup training outputs only on the main process
+	std::vector<float> cross_entropy_losses = std::vector<float>();
+	if (mpi_instance == 0) { 
+		std::cout << "[Training]" << std::endl;
+	}
+	
+	train_model(net, train_data, config, &cross_entropy_losses);
 
-	// Train.
-	cout << "[Training]" << endl;
-	std::vector<float> cross_entropy_losses = train_model(net, train_data, config);
+	// Evaluate the trained model only on the main process
+	if (mpi_instance == 0) {
+		// Print the trained prediction of data[eval_data_index].
+		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
+		int trained_prediction = net.predict(train_data[eval_data_index].pixels);
+		std::string trained_prediction_string = loader.get_prediction_string(trained_prediction);
+		std::cout << std::endl
+			<< "[Trained]" << std::endl;
+		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << trained_prediction_string << ", the real class is: " << real_class_string << std::endl;
 
-	// Print the trained prediction of data[eval_data_index].
-	int trained_prediction = net.predict(train_data[eval_data_index].pixels);
-	std::string trained_prediction_string = loader.get_prediction_string(trained_prediction);
-	std::cout << std::endl
-	     << "[Trained]" << std::endl;
-	std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << trained_prediction_string << ", the real class is: " << real_class_string << std::endl;
+		// Store predictions to save as file later.
+		std::vector<int> predictions = get_predictions(net, test_data);
+		float accuracy = evaluate_predictions(test_data, predictions);
+		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
 
-	// Store predictions to save as file later.
-	predictions = get_predictions(net, test_data);
-	accuracy = evaluate_predictions(test_data, predictions);
-	std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
-
-	saveResults(net, predictions, cross_entropy_losses, config);
+		saveResults(net, predictions, cross_entropy_losses, config);
+	}
+	
 	#endif
+	MPI_Finalize();
 	return 0;
 }

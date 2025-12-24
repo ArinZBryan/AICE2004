@@ -32,7 +32,7 @@ struct TrainConfig {
 };
 
 // Function to train the model
-std::vector<float> train_model(Network &model, const std::vector<Sample>& data, const TrainConfig &config);
+void train_model(Network &model, const std::vector<Sample>& data, const TrainConfig &config, std::vector<float>* loss_curve_out);
 
 // Function to evaluate the model
 float evaluate_predictions(const std::vector<Sample> &data, std::vector<int>& predictions);

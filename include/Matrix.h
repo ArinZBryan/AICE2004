@@ -27,6 +27,7 @@ public:
 
     inline size_t rows() const { return _rows; };
     inline size_t cols() const { return _cols; };
+    inline size_t size() const { return _rows * _cols; }
 
     inline number* data() { return _data.data(); };
     inline const number* data() const { return _data.data(); };
