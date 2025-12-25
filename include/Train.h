@@ -13,10 +13,11 @@ struct TrainConfig {
 	unsigned int random_seed;
 	unsigned int epochs;
 	double       learning_rate;
-	unsigned int batch_size;
+	unsigned int batch_size = 0x1 << 13;
 	unsigned int hidden_size;
 	unsigned int threads  = 1;
 	unsigned int tasks = 1;
+	unsigned int grainsize = 10;
 
 	std::string str() const {
 		std::ostringstream oss;

@@ -174,7 +174,7 @@ void train_model_mini_batch_tbb(Network& model, const std::vector<Sample>& data,
 			const Sample* samples_ptr = data.data();
 
 			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
-			tbb::parallel_reduce(tbb::blocked_range<size_t>(batch_begin, batch_end), ptb);
+			tbb::parallel_reduce(tbb::blocked_range<size_t>(batch_begin, batch_end, config.grainsize), ptb);
 
 			model.update(config.learning_rate, ptb.result);
 			vec_plus_vec(cse_epoch, ptb.result.cse_delta, cse_epoch);
@@ -232,7 +232,7 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 			const Sample* samples_ptr = data.data();
 
 			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
-			tbb::parallel_reduce(tbb::blocked_range<size_t>(proc_start, proc_end), ptb);
+			tbb::parallel_reduce(tbb::blocked_range<size_t>(proc_start, proc_end, config.grainsize), ptb);
 
 			MPI_Request reducerequests[5];
 			MPI_Iallreduce(MPI_IN_PLACE, batch_result.weight1_grad.data(), batch_result.weight1_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[0]);

@@ -82,6 +82,12 @@ TrainConfig parse_arguments(int argc, char *argv[]) {
 					print_usage(argv[0]);
 					throw std::runtime_error("Missing value for --tasks");
 				}
+			} else if (a == "--grain") {
+				if (i + 1 < argc) {
+					out.grainsize = static_cast<unsigned int>(std::stoul(argv[++i]));
+				} else {
+					throw std::runtime_error("Missing value for --grain");
+				}
 			} else if (a == "-h" || a == "--help") {
 				print_usage(argv[0]);
 				throw std::logic_error("Help requested");
