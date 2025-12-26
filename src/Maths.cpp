@@ -8,6 +8,8 @@
 #include "Matrix.h"
 #include "Vector.h"
 
+#include <oneapi/tbb.h>
+
 #define USE_AVX_MAT_TIMES_VEC
 #define USE_AVX_MAT_TRANSPOSE_TIMES_VEC
 #define USE_AVX_MAT_PLUS_MAT
@@ -62,6 +64,10 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 4) * 4)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 4) * 4); (itvar) += 4)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 4) * 4); (itvar) < (maxval); itvar++)
+#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), 4), [&](tbb::blocked_range<size_t> range) { \
+		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=4) {\
+			code\
+		}});
 #define ymm __m256d
 #else
 #define veclog(x) _ZGVdN8v_logf(x)
@@ -84,6 +90,10 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 8) * 8)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 8) * 8); (itvar) < (maxval); itvar++)
+#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 8) * 8), 8), [&](tbb::blocked_range<size_t> range) { \
+		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=8) {\
+			code\
+		}});
 #define ymm __m256
 #endif
 
@@ -326,12 +336,12 @@ void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
 
 	size_t elems = mat1.rows() * mat1.cols();
 
-	vec_main_for(cur, elems) {
+	vec_par_for(cur, elems,
 		ymm a = vecload(mat1.data() + cur);
 		ymm b = vecload(mat2.data() + cur);
 		ymm r = vecadd(a, b);
 		vecstore(out.data() + cur, r);
-	}
+	)
 	vec_res_for(cur, elems) {
 		out.data()[cur] = mat1.data()[cur] + mat2.data()[cur];
 	}
@@ -376,12 +386,13 @@ void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	number* res_ptr = out.data();
 
 	// add elements 8 at a time
-	vec_main_for(elem, vec1.size()) {
+
+	vec_par_for(elem, vec1.size(),
 		const ymm a = vecload(vec1_ptr + elem);
 		const ymm b = vecload(vec2_ptr + elem);
 		const ymm res = vecadd(a, b);
 		vecstore(res_ptr + elem, res);
-	}
+	)
 
 	// deal with residual elements over the multiple of 8
 	vec_res_for(elem, vec1.size()) {
@@ -868,11 +879,11 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 	for (size_t row = 0; row < rows; ++row) {
 		const ymm a_vec = vecsetvalue(a_ptr[row]);
 
-		vec_main_for(col, cols) {
+		vec_par_for(col, cols,
 			const ymm b_vec = vecload(b_ptr + col);
 			const ymm out_vec = vecmul(a_vec, b_vec);
 			vecstore(out_ptr + row * cols + col, out_vec);
-		}
+		)
 		vec_res_for(col, cols) {
 			out(row, col) = a(row) * b(col);
 		}
