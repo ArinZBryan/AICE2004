@@ -64,7 +64,7 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 4) * 4)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 4) * 4); (itvar) += 4)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 4) * 4); (itvar) < (maxval); itvar++)
-#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), 4), [&](tbb::blocked_range<size_t> range) { \
+#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), grainsize*4), [&](tbb::blocked_range<size_t> range) { \
 		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=4) {\
 			code\
 		}});
@@ -90,7 +90,7 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 8) * 8)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 8) * 8); (itvar) < (maxval); itvar++)
-#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 8) * 8), 8), [&](tbb::blocked_range<size_t> range) { \
+#define vec_par_for(itvar, maxval, grainsize, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 8) * 8), grainsize*8), [&](tbb::blocked_range<size_t> range) { \
 		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=8) {\
 			code\
 		}});
@@ -332,18 +332,27 @@ Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2) {
 }
 #if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
 void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
-	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
+	// assert vectors are of same size
+	assert((mat1.size() == mat2.size() && mat1.size() == out.size()));
 
-	size_t elems = mat1.rows() * mat1.cols();
+	// store sizes and pointers immediately to negate cost of load from class if compiler does not inline
+	const number* mat1_ptr = mat1.data();
+	const number* mat2_ptr = mat2.data();
+	number* res_ptr = out.data();
 
-	vec_par_for(cur, elems,
-		ymm a = vecload(mat1.data() + cur);
-		ymm b = vecload(mat2.data() + cur);
-		ymm r = vecadd(a, b);
-		vecstore(out.data() + cur, r);
+	// Grainsize of 8 is the *MINIMUM* value that works here this is likely due to issues with multiple 
+	// threads reading/writing to the same cache line, causing race conditions and the addition not working
+	// properly. This value can be increased, but DO NOT DECREASE IT BELOW 8.
+	vec_par_for(elem, mat1.size(), 8,
+		const ymm a = vecload(mat1_ptr + elem);
+		const ymm b = vecload(mat2_ptr + elem);
+		const ymm res = vecadd(a, b);
+		vecstore(res_ptr + elem, res);
 	)
-	vec_res_for(cur, elems) {
-		out.data()[cur] = mat1.data()[cur] + mat2.data()[cur];
+
+	// deal with residual elements over the multiple of 8
+	vec_res_for(elem, mat1.size()) {
+		res_ptr[elem] = mat1_ptr[elem] + mat2_ptr[elem];
 	}
 }
 #else
@@ -387,7 +396,7 @@ void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 
 	// add elements 8 at a time
 
-	vec_par_for(elem, vec1.size(),
+	vec_par_for(elem, vec1.size(), 8,
 		const ymm a = vecload(vec1_ptr + elem);
 		const ymm b = vecload(vec2_ptr + elem);
 		const ymm res = vecadd(a, b);
@@ -401,7 +410,7 @@ void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 }
 #else
 void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
-	assert((vec1.size() == vec2.size()))
+	assert((vec1.size() == vec2.size()));
 	out.resize(vec1.size());
 	for (size_t i = 0; i < vec1.size(); ++i) {
 		out(i) = vec1(i) + vec2(i);
@@ -653,7 +662,7 @@ void softmax_vec(Vector& vec, Vector& out) {
 #else
 void softmax_vec(Vector& vec, Vector& out) {
 	out.resize(vec.size());
-	number max_val = *(std::max_element(result.begin(), result.end()));
+	number max_val = *(std::max_element(vec.begin(), vec.end()));
 
 	number* result_ptr = out.data();
 	const number* vec_ptr = vec.data();
@@ -879,7 +888,7 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 	for (size_t row = 0; row < rows; ++row) {
 		const ymm a_vec = vecsetvalue(a_ptr[row]);
 
-		vec_par_for(col, cols,
+		vec_par_for(col, cols, 8,
 			const ymm b_vec = vecload(b_ptr + col);
 			const ymm out_vec = vecmul(a_vec, b_vec);
 			vecstore(out_ptr + row * cols + col, out_vec);
@@ -891,7 +900,7 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 }
 #else
 void outer_product(const Vector& a, const Vector& b, Matrix& out) {
-	assert((out.rows() == a.size() && out.cols() == b.size()))
+	assert((out.rows() == a.size() && out.cols() == b.size()));
 	size_t m = a.size();
 	size_t n = b.size();
 	for (size_t i = 0; i < m; ++i) {
@@ -899,6 +908,5 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 			out(i, j) = a(i) * b(j);
 		}
 	}
-	return out;
 }
 #endif
