@@ -64,7 +64,7 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 4) * 4)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 4) * 4); (itvar) += 4)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 4) * 4); (itvar) < (maxval); itvar++)
-#define vec_par_for(itvar, maxval, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), grainsize*4), [&](tbb::blocked_range<size_t> range) { \
+#define vec_par_for(itvar, maxval, grainsize, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), grainsize*4), [&](tbb::blocked_range<size_t> range) { \
 		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=4) {\
 			code\
 		}});
