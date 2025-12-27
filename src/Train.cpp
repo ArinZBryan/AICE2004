@@ -317,7 +317,7 @@ void train_model_mini_batch(Network& model, const std::vector<Sample>& data, con
 		std::cout << total_loss << std::endl;
 	}
 }
-void train_model_stochastic(Network& model, std::vector<Sample> data, const TrainConfig& config, std::vector<float>* loss_curve_out) {
+void train_model_stochastic(Network& model, const std::vector<Sample>& data, const TrainConfig& config, std::vector<float>* loss_curve_out) {
 	for (unsigned int epoch = 0; epoch < config.epochs; ++epoch) {
 		Vector cse_epoch(10, 0.0f); // cross-entropy loss for the epoch
 

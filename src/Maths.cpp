@@ -885,18 +885,21 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 
 	number* out_ptr = out.data();
 
-	for (size_t row = 0; row < rows; ++row) {
-		const ymm a_vec = vecsetvalue(a_ptr[row]);
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, rows), [&](tbb::blocked_range<size_t> range){
+		for (size_t row = range.begin(); row < range.end(); ++row) {
+			const ymm a_vec = vecsetvalue(a_ptr[row]);
 
-		vec_par_for(col, cols, 8,
-			const ymm b_vec = vecload(b_ptr + col);
-			const ymm out_vec = vecmul(a_vec, b_vec);
-			vecstore(out_ptr + row * cols + col, out_vec);
-		)
-		vec_res_for(col, cols) {
-			out(row, col) = a(row) * b(col);
+			vec_main_for(col, cols) { 
+				const ymm b_vec = vecload(b_ptr + col);
+				const ymm out_vec = vecmul(a_vec, b_vec);
+				vecstore(out_ptr + row * cols + col, out_vec);
+			}
+			vec_res_for(col, cols) {
+				out(row, col) = a(row) * b(col);
+			}
 		}
-	}
+	});
+	
 }
 #else
 void outer_product(const Vector& a, const Vector& b, Matrix& out) {

@@ -124,7 +124,8 @@ int main() {
 	Network net = Network(config.hidden_size, config.random_seed);
 
     // Train.
-    std::vector<float> actualLossCurve = train_model(net, train_data, config);
+    std::vector<float> actualLossCurve;
+    train_model(net, train_data, config, &actualLossCurve);
     // Print the trained prediction of data[eval_data_index].
     // Store predictions to save as file later.
     std::vector<int> predictions = get_predictions(net, test_data);
@@ -137,8 +138,8 @@ int main() {
         actualPredictions.emplace_back(static_cast<uint8_t>(p));
     }
 
-    std::vector<Matrix> actualWeights = net.get_weights();
-    std::vector<Vector> actualBiases = net.get_bias();
+    std::vector<Matrix> actualWeights = { net.get_weight(1), net.get_weight(2) };
+    std::vector<Vector> actualBiases = { net.get_bias(1), net.get_bias(2) };
     WeightsFile actualWeightsFile = {
         INPUT_SIZE,
         config.hidden_size,
