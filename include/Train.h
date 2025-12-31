@@ -12,8 +12,8 @@
 struct TrainConfig {
 	unsigned int random_seed;
 	unsigned int epochs;
-	double       learning_rate;
-	unsigned int batch_size = 0x1 << 13;
+	float        learning_rate;
+	unsigned int batch_size;
 	unsigned int hidden_size;
 	unsigned int threads  = 1;
 	unsigned int tasks = 1;

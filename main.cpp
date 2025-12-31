@@ -120,7 +120,6 @@ void saveResults(const Network& net, const std::vector<int>& predictions, const 
 
 int main(int argc, char* argv[]) {
 
-#if true
 	MPI_Init(&argc, &argv);
 	int mpi_instance, mpi_instances;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_instances);
@@ -196,7 +195,6 @@ int main(int argc, char* argv[]) {
 		saveResults(net, predictions, cross_entropy_losses, config);
 	}
 	
-	#endif
 	MPI_Finalize();
 	return 0;
 }
