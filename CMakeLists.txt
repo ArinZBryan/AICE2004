@@ -52,9 +52,9 @@ endif()
 
 # Build Accuracy Test Executable
 if (MAIN_SOURCES)
-	add_executable(accuracy accuracy-test-main.cpp)
-	target_sources(accuracy PRIVATE ${MAIN_SOURCES})
-	target_link_libraries(accuracy MPI::MPI_CXX TBB::tbb)
+	add_executable(compare compare.cpp)
+	target_sources(compare PRIVATE ${MAIN_SOURCES})
+	target_link_libraries(compare)
 else()
 	message(WARNING "No source files found in the src/ directory. Skipping accuracy test target creation.")
 endif()

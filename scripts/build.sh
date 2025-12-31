@@ -33,10 +33,10 @@ elif [ "$1" == "test" ]; then
     if [ ! -d build/test ]; then mkdir build/test; fi
     cmake -S . -B build/test -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-O0";
     cmake --build build/test --target tests -j12;
-elif [ "$1" == "bench" ]; then
-    if [ ! -d build/bench ]; then mkdir build/bench; fi
-    cmake -S . -B build/bench -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O0";
-    cmake --build build/bench --target accuracy -j12;
+elif [ "$1" == "compare" ]; then
+    if [ ! -d build/compare ]; then mkdir build/compare; fi
+    cmake -S . -B build/compare -DCMAKE_CXX_FLAGS="-O3";
+    cmake --build build/compare --target compare -j12;
 else
     if [ ! -d build/main/release ]; then mkdir build/main/release; fi
     cmake -S . -B build/main/release -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3";
