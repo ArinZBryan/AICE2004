@@ -19,7 +19,7 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 		for (size_t batch = 0; batch < num_batches; batch++) {
 			
 			// Calculate the start, end and actual size of this batch
-			size_t batch_start = num_batches * batch;
+			size_t batch_start = config.batch_size * batch;
 			size_t batch_end = std::min(batch_start + config.batch_size, data.size());
 			size_t batch_size = batch_end - batch_start;
 
@@ -65,7 +65,7 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 			MPI_Iallreduce(MPI_IN_PLACE, batch_result.bias2_grad.data(), batch_result.bias2_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[3]);
 			MPI_Iallreduce(MPI_IN_PLACE, batch_result.cse_delta.data(), batch_result.cse_delta.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[4]);
 			MPI_Waitall(5, reducerequests, MPI_STATUSES_IGNORE);
-
+			
 			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch);
 			model.update(config.learning_rate, batch_result);
 		}
@@ -197,14 +197,14 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 	int mpi_proc, mpi_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_proc);
-	
+
 	for (size_t epoch = 0; epoch < config.epochs; ++epoch) {
 		Vector cse_epoch(10);
 		size_t num_batches = std::ceil(static_cast<float>(data.size()) / static_cast<float>(config.batch_size));
 		for (size_t batch = 0; batch < num_batches; batch++) {
 			
 			// Calculate the start, end and actual size of this batch
-			size_t batch_start = num_batches * batch;
+			size_t batch_start = config.batch_size * batch;
 			size_t batch_end = std::min(batch_start + config.batch_size, data.size());
 			size_t batch_size = batch_end - batch_start;
 
@@ -235,13 +235,13 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 			tbb::parallel_reduce(tbb::blocked_range<size_t>(proc_start, proc_end, config.grainsize), ptb);
 
 			MPI_Request reducerequests[5];
-			MPI_Iallreduce(MPI_IN_PLACE, batch_result.weight1_grad.data(), batch_result.weight1_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[0]);
-			MPI_Iallreduce(MPI_IN_PLACE, batch_result.weight2_grad.data(), batch_result.weight2_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[1]);
-			MPI_Iallreduce(MPI_IN_PLACE, batch_result.bias1_grad.data(), batch_result.bias1_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[2]);
-			MPI_Iallreduce(MPI_IN_PLACE, batch_result.bias2_grad.data(), batch_result.bias2_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[3]);
-			MPI_Iallreduce(MPI_IN_PLACE, batch_result.cse_delta.data(), batch_result.cse_delta.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[4]);
+			MPI_Iallreduce(ptb.result.weight1_grad.data(), batch_result.weight1_grad.data(), batch_result.weight1_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[0]);
+			MPI_Iallreduce(ptb.result.weight2_grad.data(), batch_result.weight2_grad.data(), batch_result.weight2_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[1]);
+			MPI_Iallreduce(ptb.result.bias1_grad.data(), batch_result.bias1_grad.data(), batch_result.bias1_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[2]);
+			MPI_Iallreduce(ptb.result.bias2_grad.data(), batch_result.bias2_grad.data(), batch_result.bias2_grad.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[3]);
+			MPI_Iallreduce(ptb.result.cse_delta.data(), batch_result.cse_delta.data(), batch_result.cse_delta.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[4]);
 			MPI_Waitall(5, reducerequests, MPI_STATUSES_IGNORE);
-
+			
 			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch);
 			model.update(config.learning_rate, batch_result);
 		}
@@ -372,7 +372,7 @@ void train_model(Network& model, const std::vector<Sample>& data, const TrainCon
 			train_model_stochastic(model, data, config, loss_curve_out); 
 			break;
 		case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED: 
-			train_model_mini_batch_tbb(model, data, config, loss_curve_out); 
+			train_model_mini_batch_mpi_tbb(model, data, config, loss_curve_out); 
 			break;
 		case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED: 
 			break;
