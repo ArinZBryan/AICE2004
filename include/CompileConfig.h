@@ -1,7 +1,7 @@
 #pragma once
 
 // Configure what features this program supports during compilation
-#define USE_FP64                                // Use double precision floats rather than single precision
+//#define USE_FP64                                // Use double precision floats rather than single precision
 //#define USE_MPI                                 // Use MPI acceleration where available
 #define USE_AVX_MAT_TIMES_VEC                   // Use AVX intrinsic version of this function
 #define USE_AVX_MAT_TRANSPOSE_TIMES_VEC         // Use AVX intrinsic version of this function
