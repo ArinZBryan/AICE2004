@@ -316,9 +316,6 @@ void mat_plus_mat_avx(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	const number* mat2_ptr = mat2.data();
 	number* res_ptr = out.data();
 
-	// Grainsize of 8 is the *MINIMUM* value that works here this is likely due to issues with multiple 
-	// threads reading/writing to the same cache line, causing race conditions and the addition not working
-	// properly. This value can be increased, but DO NOT DECREASE IT BELOW 8.
 	vec_main_for(elem, mat1.size()) {
 		const ymm a = vecload(mat1_ptr + elem);
 		const ymm b = vecload(mat2_ptr + elem);
@@ -326,7 +323,6 @@ void mat_plus_mat_avx(Matrix& mat1, Matrix& mat2, Matrix& out) {
 		vecstore(res_ptr + elem, res);
 	}
 
-	// deal with residual elements over the multiple of 8
 	vec_res_for(elem, mat1.size()) {
 		res_ptr[elem] = mat1_ptr[elem] + mat2_ptr[elem];
 	}
@@ -889,22 +885,17 @@ void outer_product(const Vector& a, const Vector& b, Matrix& out) {
 	const number* b_ptr = b.data();
 
 	number* out_ptr = out.data();
-
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, rows), [&](tbb::blocked_range<size_t> range){
-		for (size_t row = range.begin(); row < range.end(); ++row) {
-			const ymm a_vec = vecsetvalue(a_ptr[row]);
-
-			vec_main_for(col, cols) { 
-				const ymm b_vec = vecload(b_ptr + col);
-				const ymm out_vec = vecmul(a_vec, b_vec);
-				vecstore(out_ptr + row * cols + col, out_vec);
-			}
-			vec_res_for(col, cols) {
-				out(row, col) = a(row) * b(col);
-			}
+	for (size_t row = 0; row < rows; ++row) {
+		const ymm a_vec = vecsetvalue(a_ptr[row]);
+		vec_main_for(col, cols) { 
+			const ymm b_vec = vecload(b_ptr + col);
+			const ymm out_vec = vecmul(a_vec, b_vec);
+			vecstore(out_ptr + row * cols + col, out_vec);
 		}
-	});
-	
+		vec_res_for(col, cols) {
+			out(row, col) = a(row) * b(col);
+		}
+	}
 }
 #else
 void outer_product(const Vector& a, const Vector& b, Matrix& out) {
