@@ -1,13 +1,17 @@
 #include "Train.h"
 #include "Matrix.h"
 #include "Vector.h"
-#include "DataType.h"
+#include "CompileConfig.h"
 
 #include <cstddef>
 #include <iostream>
 #include <oneapi/tbb.h>
-#include <mpi.h>
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
+#ifdef USE_MPI
 void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data, const TrainConfig& config, std::vector<float>* loss_curve_out) {
 	int mpi_proc, mpi_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -50,12 +54,12 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 				Vector label_one_hot(10, 0.0f);
 				label_one_hot(sample_label) = 1.0;
 
-				Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), this_proc_scratch_space);
-				mat_plus_mat(batch_result.weight1_grad, this_proc_scratch_space.weight1_grad, batch_result.weight1_grad);
-				mat_plus_mat(batch_result.weight2_grad, this_proc_scratch_space.weight2_grad, batch_result.weight2_grad);
-				vec_plus_vec(batch_result.bias1_grad, this_proc_scratch_space.bias1_grad, batch_result.bias1_grad);
-				vec_plus_vec(batch_result.bias2_grad, this_proc_scratch_space.bias2_grad, batch_result.bias2_grad);
-				vec_plus_vec(batch_result.cse_delta, this_proc_scratch_space.cse_delta, batch_result.cse_delta);
+				Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.use_avx, this_proc_scratch_space);
+				mat_plus_mat(batch_result.weight1_grad, this_proc_scratch_space.weight1_grad, batch_result.weight1_grad, config.use_avx);
+				mat_plus_mat(batch_result.weight2_grad, this_proc_scratch_space.weight2_grad, batch_result.weight2_grad, config.use_avx);
+				vec_plus_vec(batch_result.bias1_grad, this_proc_scratch_space.bias1_grad, batch_result.bias1_grad, config.use_avx);
+				vec_plus_vec(batch_result.bias2_grad, this_proc_scratch_space.bias2_grad, batch_result.bias2_grad, config.use_avx);
+				vec_plus_vec(batch_result.cse_delta, this_proc_scratch_space.cse_delta, batch_result.cse_delta, config.use_avx);
 			}
 
 			MPI_Request reducerequests[5];
@@ -66,7 +70,7 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 			MPI_Iallreduce(MPI_IN_PLACE, batch_result.cse_delta.data(), batch_result.cse_delta.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[4]);
 			MPI_Waitall(5, reducerequests, MPI_STATUSES_IGNORE);
 			
-			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch);
+			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch, config.use_avx);
 			model.update(config.learning_rate, batch_result);
 		}
 		Vector data_size_broadcasted = Vector(10, data.size());
@@ -84,6 +88,7 @@ void train_model_mini_batch_mpi(Network& model, const std::vector<Sample>& data,
 		}
 	}
 }
+#endif
 class ParallelTrainBody {
 	const Sample* samples;
 	const Matrix* weight1;
@@ -91,6 +96,7 @@ class ParallelTrainBody {
 	const Vector* bias1;
 	const Vector* bias2;
 	const size_t _hidden_size;
+	const bool useAVX;
 
 	Network::TrainResult tr;
 
@@ -104,12 +110,12 @@ class ParallelTrainBody {
 			Vector label_one_hot(10, 0.0f);
 			label_one_hot(sample_label) = 1.0;
 
-			Network::train(sample_data, label_one_hot, weight1, weight2, bias1, bias2, tr);
-			mat_plus_mat(result.weight1_grad, tr.weight1_grad, result.weight1_grad);
-			mat_plus_mat(result.weight2_grad, tr.weight2_grad, result.weight2_grad);
-			vec_plus_vec(result.bias1_grad, tr.bias1_grad, result.bias1_grad);
-			vec_plus_vec(result.bias2_grad, tr.bias2_grad, result.bias2_grad);
-			vec_plus_vec(result.cse_delta, tr.cse_delta, result.cse_delta);
+			Network::train(sample_data, label_one_hot, weight1, weight2, bias1, bias2, useAVX ,tr);
+			mat_plus_mat(result.weight1_grad, tr.weight1_grad, result.weight1_grad, useAVX);
+			mat_plus_mat(result.weight2_grad, tr.weight2_grad, result.weight2_grad, useAVX);
+			vec_plus_vec(result.bias1_grad, tr.bias1_grad, result.bias1_grad, useAVX);
+			vec_plus_vec(result.bias2_grad, tr.bias2_grad, result.bias2_grad, useAVX);
+			vec_plus_vec(result.cse_delta, tr.cse_delta, result.cse_delta, useAVX);
 		}
 	}
 
@@ -120,6 +126,7 @@ class ParallelTrainBody {
 	      bias1(other.bias1),
 	      bias2(other.bias2),
 	      _hidden_size(other._hidden_size),
+		  useAVX(other.useAVX),
 	      tr{
 	          Matrix(other._hidden_size, Network::INPUT_SIZE, 0.0f),
 	          Matrix(Network::OUTPUT_SIZE, other._hidden_size, 0.0f),
@@ -134,20 +141,21 @@ class ParallelTrainBody {
 	          Vector(10)} {}
 
 	void join(const ParallelTrainBody& other) {
-		mat_plus_mat(result.weight1_grad, const_cast<Matrix&>(other.result.weight1_grad), result.weight1_grad);
-		mat_plus_mat(result.weight2_grad, const_cast<Matrix&>(other.result.weight2_grad), result.weight2_grad);
-		vec_plus_vec(result.bias1_grad, const_cast<Vector&>(other.result.bias1_grad), result.bias1_grad);
-		vec_plus_vec(result.bias2_grad, const_cast<Vector&>(other.result.bias2_grad), result.bias2_grad);
-		vec_plus_vec(result.cse_delta, const_cast<Vector&>(other.result.cse_delta), result.cse_delta);
+		mat_plus_mat(result.weight2_grad, const_cast<Matrix&>(other.result.weight2_grad), result.weight2_grad, useAVX);
+		mat_plus_mat(result.weight1_grad, const_cast<Matrix&>(other.result.weight1_grad), result.weight1_grad, useAVX);
+		vec_plus_vec(result.bias1_grad, const_cast<Vector&>(other.result.bias1_grad), result.bias1_grad, useAVX);
+		vec_plus_vec(result.bias2_grad, const_cast<Vector&>(other.result.bias2_grad), result.bias2_grad, useAVX);
+		vec_plus_vec(result.cse_delta, const_cast<Vector&>(other.result.cse_delta), result.cse_delta, useAVX);
 	}
 
-	ParallelTrainBody(const Sample* samples, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, const size_t hidden_size)
+	ParallelTrainBody(const Sample* samples, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, const size_t hidden_size, const bool useAVX)
 	    : samples(samples),
 	      weight1(weight1),
 	      weight2(weight2),
 	      bias1(bias1),
 	      bias2(bias2),
 	      _hidden_size(hidden_size),
+		  useAVX(useAVX),
 	      tr{
 	          Matrix(hidden_size, Network::INPUT_SIZE, 0.0f),
 	          Matrix(Network::OUTPUT_SIZE, hidden_size, 0.0f),
@@ -173,11 +181,11 @@ void train_model_mini_batch_tbb(Network& model, const std::vector<Sample>& data,
 
 			const Sample* samples_ptr = data.data();
 
-			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
+			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size, config.use_avx);
 			tbb::parallel_reduce(tbb::blocked_range<size_t>(batch_begin, batch_end, config.grainsize), ptb);
 
 			model.update(config.learning_rate, ptb.result);
-			vec_plus_vec(cse_epoch, ptb.result.cse_delta, cse_epoch);
+			vec_plus_vec(cse_epoch, ptb.result.cse_delta, cse_epoch, config.use_avx);
 		}
 
 		Vector data_size_broadcasted = Vector(10, data.size());
@@ -193,6 +201,7 @@ void train_model_mini_batch_tbb(Network& model, const std::vector<Sample>& data,
 		std::cout << total_loss << std::endl;
 	}
 }
+#ifdef USE_MPI
 void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& data, const TrainConfig& config, std::vector<float>* loss_curve_out) {
 	int mpi_proc, mpi_size;
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -231,7 +240,7 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 
 			const Sample* samples_ptr = data.data();
 
-			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size);
+			ParallelTrainBody ptb(samples_ptr, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.hidden_size, config.use_avx);
 			tbb::parallel_reduce(tbb::blocked_range<size_t>(proc_start, proc_end, config.grainsize), ptb);
 
 			MPI_Request reducerequests[5];
@@ -242,7 +251,7 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 			MPI_Iallreduce(ptb.result.cse_delta.data(), batch_result.cse_delta.data(), batch_result.cse_delta.size(), MPI_NUMBER, MPI_SUM, MPI_COMM_WORLD, &reducerequests[4]);
 			MPI_Waitall(5, reducerequests, MPI_STATUSES_IGNORE);
 			
-			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch);
+			vec_plus_vec(cse_epoch, batch_result.cse_delta, cse_epoch, config.use_avx);
 			model.update(config.learning_rate, batch_result);
 		}
 		Vector data_size_broadcasted = Vector(10, data.size());
@@ -260,6 +269,7 @@ void train_model_mini_batch_mpi_tbb(Network& model, const std::vector<Sample>& d
 		}
 	}
 }
+#endif
 void train_model_mini_batch(Network& model, const std::vector<Sample>& data, const TrainConfig& config, std::vector<float>* loss_curve_out) {
 	for (unsigned int epoch = 0; epoch < config.epochs; ++epoch) {
 		Vector cse_epoch(10, 0.0f); // cross-entropy loss for the epoch
@@ -291,16 +301,16 @@ void train_model_mini_batch(Network& model, const std::vector<Sample>& data, con
 				Vector label_one_hot(10, 0.0f);
 				label_one_hot(sample_label) = 1.0;
 
-				Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), tr);
-				mat_plus_mat(result.weight1_grad, tr.weight1_grad, result.weight1_grad);
-				mat_plus_mat(result.weight2_grad, tr.weight2_grad, result.weight2_grad);
-				vec_plus_vec(result.bias1_grad, tr.bias1_grad, result.bias1_grad);
-				vec_plus_vec(result.bias2_grad, tr.bias2_grad, result.bias2_grad);
-				vec_plus_vec(result.cse_delta, tr.cse_delta, result.cse_delta);
+				Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.use_avx, tr);
+				mat_plus_mat(result.weight1_grad, tr.weight1_grad, result.weight1_grad, config.use_avx);
+				mat_plus_mat(result.weight2_grad, tr.weight2_grad, result.weight2_grad, config.use_avx);
+				vec_plus_vec(result.bias1_grad, tr.bias1_grad, result.bias1_grad, config.use_avx);
+				vec_plus_vec(result.bias2_grad, tr.bias2_grad, result.bias2_grad, config.use_avx);
+				vec_plus_vec(result.cse_delta, tr.cse_delta, result.cse_delta, config.use_avx);
 				// std::cout << i << " : " << printVector(result.cse_delta) << "\n";
 			}
 
-			vec_plus_vec(cse_epoch, result.cse_delta, cse_epoch);
+			vec_plus_vec(cse_epoch, result.cse_delta, cse_epoch, config.use_avx);
 			model.update(config.learning_rate, result);
 		}
 
@@ -334,10 +344,10 @@ void train_model_stochastic(Network& model, const std::vector<Sample>& data, con
 			Vector label_one_hot(10, 0.0f);
 			label_one_hot(sample_label) = 1.0;
 
-			Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), tr);
+			Network::train(sample_data, label_one_hot, &model.get_weight(1), &model.get_weight(2), &model.get_bias(1), &model.get_bias(2), config.use_avx, tr);
 			model.update(config.learning_rate, tr);
 
-			vec_plus_vec(cse_epoch, tr.cse_delta, cse_epoch);
+			vec_plus_vec(cse_epoch, tr.cse_delta, cse_epoch, config.use_avx);
 		}
 		Vector data_size_broadcasted = Vector(10, data.size());
 		divide_elementwise_vec(cse_epoch, data_size_broadcasted, cse_epoch);
@@ -372,17 +382,25 @@ void train_model(Network& model, const std::vector<Sample>& data, const TrainCon
 			train_model_stochastic(model, data, config, loss_curve_out); 
 			break;
 		case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED: 
-			train_model_mini_batch_mpi_tbb(model, data, config, loss_curve_out); 
+			train_model_mini_batch_tbb(model, data, config, loss_curve_out); 
 			break;
 		case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED: 
 			break;
 		case MPI_ENABLED  | TBB_DISABLED | BATCHING_ENABLED: 
+			#ifdef USE_MPI
 			train_model_mini_batch_mpi(model, data, config, loss_curve_out);
+			#else
+			train_model_mini_batch(model, data, config, loss_curve_out);
+			#endif
 			break;
 		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED: 
 			break;
 		case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED: 
+			#ifdef USE_MPI
 			train_model_mini_batch_mpi_tbb(model, data, config, loss_curve_out); 
+			#else
+			train_model_mini_batch_tbb(model, data, config, loss_curve_out);
+			#endif
 			break;
 	}
 }
@@ -399,10 +417,10 @@ float evaluate_predictions(const std::vector<Sample>& data, std::vector<int>& pr
 	return static_cast<float>(correct) / data.size();
 }
 
-std::vector<int> get_predictions(Network& model, const std::vector<Sample>& data) {
+std::vector<int> get_predictions(Network& model, const std::vector<Sample>& data, bool useAVX) {
 	std::vector<int> ret(data.size());
 	for (size_t i = 0; i < data.size(); i++) {
-		ret[i] = model.predict(Vector(data[i].pixels));
+		ret[i] = model.predict(Vector(data[i].pixels), useAVX);
 	}
 	return ret;
 }

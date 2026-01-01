@@ -18,6 +18,7 @@ struct TrainConfig {
 	unsigned int threads  = 1;
 	unsigned int tasks = 1;
 	unsigned int grainsize = 10;
+	bool 		 use_avx = true;
 
 	std::string str() const {
 		std::ostringstream oss;
@@ -38,4 +39,4 @@ void train_model(Network &model, const std::vector<Sample>& data, const TrainCon
 // Function to evaluate the model
 float evaluate_predictions(const std::vector<Sample> &data, std::vector<int>& predictions);
 
-std::vector<int> get_predictions(Network &model, const std::vector<Sample> &data);
+std::vector<int> get_predictions(Network &model, const std::vector<Sample> &data, bool useAVX);

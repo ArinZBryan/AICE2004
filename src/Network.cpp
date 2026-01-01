@@ -1,6 +1,6 @@
 #include "Network.h"
 #include "Matrix.h"
-#include "DataType.h"
+#include "CompileConfig.h"
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -75,17 +75,17 @@ void Network::xavier_initialization(Matrix &W, int in_dim, int out_dim) {
 	}
 }
 
-Vector Network::forward(const Vector &input) {
+Vector Network::forward(const Vector &input, bool useAVX) {
 	// Input to hidden: weights * input + bias
 	Vector v = mat_times_vec(weight1, input);
-	vec_plus_vec(v, bias1, v);
+	vec_plus_vec(v, bias1, v, useAVX);
 
 	// Activation function: Sigmoid
 	sigmoid_vec(v, v);
 
 	// Hidden to output: weights * hidden + bias
 	Vector result = mat_times_vec(weight2, v);
-	vec_plus_vec(result, bias2, result);
+	vec_plus_vec(result, bias2, result, useAVX);
 
 	// Apply softmax to get probabilities
 	softmax_vec(result, result);
@@ -93,19 +93,19 @@ Vector Network::forward(const Vector &input) {
 	return result;
 }
 
-void Network::train(const Vector& input, const Vector& target, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, Network::TrainResult& out) {
+void Network::train(const Vector& input, const Vector& target, const Matrix* weight1, const Matrix* weight2, const Vector* bias1, const Vector* bias2, bool useAVX, Network::TrainResult& out) {
 	
 	// ======================= Forward Step ========================
 	// Input->Hidden: weights * input + bias
 	Vector sigmoid = mat_times_vec(*weight1, input);
-	vec_plus_vec(sigmoid, const_cast<Vector&>(*bias1), sigmoid);
+	vec_plus_vec(sigmoid, const_cast<Vector&>(*bias1), sigmoid, useAVX);
 
 	// Input->Hidden activation function
 	sigmoid_vec(sigmoid, sigmoid);
 
 	// Hidden->Output: weights * hidden + bias
 	mat_times_vec(*weight2, sigmoid, out.bias2_grad);
-	vec_plus_vec(out.bias2_grad, const_cast<Vector&>(*bias2), out.bias2_grad);
+	vec_plus_vec(out.bias2_grad, const_cast<Vector&>(*bias2), out.bias2_grad, useAVX);
 
 	// Output probability function
 	softmax_vec(out.bias2_grad, out.bias2_grad);
@@ -142,12 +142,12 @@ void Network::update(float learning_rate, const Network::TrainResult& result) {
 	}
 }
 
-int Network::predict(const Vector &input) {
-	Vector output = forward(input);
+int Network::predict(const Vector &input, bool useAVX) {
+	Vector output = forward(input, useAVX);
 	return std::distance(output.begin(), std::max_element(output.begin(), output.end()));
 }
 
-int Network::predict(const std::vector<float> &input) {
-	Vector output = forward(Vector(input));
+int Network::predict(const std::vector<float> &input, bool useAVX) {
+	Vector output = forward(Vector(input), useAVX);
 	return std::distance(output.begin(), std::max_element(output.begin(), output.end()));
 }

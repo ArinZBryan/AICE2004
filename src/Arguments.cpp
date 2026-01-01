@@ -14,6 +14,9 @@ static void print_usage(const char *prog) {
 	     << "  -z, --hidden_size <n>      Hidden layer size.\n"
 	     << "      --threads <n>          Number of threads per task (default 1).\n"
 	     << "      --tasks <n>            Number of tasks (default 1).\n"
+		 << "      --grain <n>            Grain size for TBB training (default 10)\n"
+		 << "      --(no)avx              Enable/Disable AVX maths functions (default enabled)\n"
+
 	     << "  -h, --help                 Show this help message\n";
 }
 
@@ -88,6 +91,10 @@ TrainConfig parse_arguments(int argc, char *argv[]) {
 				} else {
 					throw std::runtime_error("Missing value for --grain");
 				}
+			} else if (a == "--avx") {
+				out.use_avx = true;
+			} else if (a == "--noavx") {
+				out.use_avx = false;
 			} else if (a == "-h" || a == "--help") {
 				print_usage(argv[0]);
 				throw std::logic_error("Help requested");

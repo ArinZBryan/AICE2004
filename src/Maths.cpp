@@ -3,25 +3,14 @@
 #include <cmath>
 #include <cstddef>
 
-#include "DataType.h"
+#include "CompileConfig.h"
 #include "Maths.h"
 #include "Matrix.h"
 #include "Vector.h"
 
 #include <oneapi/tbb.h>
 
-#define USE_AVX_MAT_TIMES_VEC
-#define USE_AVX_MAT_TRANSPOSE_TIMES_VEC
-#define USE_AVX_MAT_PLUS_MAT
-#define USE_AVX_VEC_PLUS_VEC
-#define USE_AVX_VEC_MINUS_VEC
-#define USE_AVX_MULTIPLY_ELEMENTWISE_VEC
-#define USE_AVX_SIGMOID_VEC
-#define USE_AVX_SIGMOID_DERIVATIVE
-#define USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE
-#define USE_AVX_SOFTMAX_VEC
-#define USE_AVX_CROSS_ENTROPY_LOSS
-#define USE_AVX_OUTER_PRODUCT
+
 
 #if defined(__AVX__)
 #include <immintrin.h>
@@ -64,10 +53,6 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 4) * 4)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 4) * 4); (itvar) += 4)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 4) * 4); (itvar) < (maxval); itvar++)
-#define vec_par_for(itvar, maxval, grainsize, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 4) * 4), grainsize*4), [&](tbb::blocked_range<size_t> range) { \
-		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=4) {\
-			code\
-		}});
 #define ymm __m256d
 #else
 #define veclog(x) _ZGVdN8v_logf(x)
@@ -90,10 +75,6 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vecfit(x) (((x) / 8) * 8)
 #define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 8) * 8); (itvar) < (maxval); itvar++)
-#define vec_par_for(itvar, maxval, grainsize, code) tbb::parallel_for(tbb::blocked_range<size_t>(0, (((maxval) / 8) * 8), grainsize*8), [&](tbb::blocked_range<size_t> range) { \
-		for (size_t itvar = range.begin(); itvar < range.end(); itvar+=8) {\
-			code\
-		}});
 #define ymm __m256
 #endif
 
@@ -325,13 +306,8 @@ void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) 
 }
 #endif
 
-Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2) {
-	Matrix ret(mat1.rows(), mat1.cols());
-	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret);
-	return ret;
-}
 #if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
-void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+void mat_plus_mat_avx(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	// assert vectors are of same size
 	assert((mat1.size() == mat2.size() && mat1.size() == out.size()));
 
@@ -343,31 +319,45 @@ void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	// Grainsize of 8 is the *MINIMUM* value that works here this is likely due to issues with multiple 
 	// threads reading/writing to the same cache line, causing race conditions and the addition not working
 	// properly. This value can be increased, but DO NOT DECREASE IT BELOW 8.
-	vec_par_for(elem, mat1.size(), 8,
+	vec_main_for(elem, mat1.size()) {
 		const ymm a = vecload(mat1_ptr + elem);
 		const ymm b = vecload(mat2_ptr + elem);
 		const ymm res = vecadd(a, b);
 		vecstore(res_ptr + elem, res);
-	)
+	}
 
 	// deal with residual elements over the multiple of 8
 	vec_res_for(elem, mat1.size()) {
 		res_ptr[elem] = mat1_ptr[elem] + mat2_ptr[elem];
 	}
 }
-#else
-void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
+#endif
+void mat_plus_mat_tbb(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
 	size_t elems = mat1.rows() * mat1.cols();
 	number* mat1_data = mat1.data();
 	number* mat2_data = mat2.data();
 	number* out_data = out.data();
 
-	for (size_t i = 0; i < elems; i++) {
-		out_data[i] = mat1_data[i] + mat2_data[i];
-	}
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, elems), [&](tbb::blocked_range<size_t> range){
+		for (size_t i = range.begin(); i < range.end(); ++i) {
+			out_data[i] = mat1_data[i] + mat2_data[i];
+		}
+	});
 }
-#endif
+Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2, bool useAVX) {
+	Matrix ret(mat1.rows(), mat1.cols());
+	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret, useAVX);
+	return ret;
+}
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out, bool useAVX) {
+	#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
+	if (useAVX) mat_plus_mat_avx(mat1, mat2, out);
+	else mat_plus_mat_avx(mat1, mat2, out);
+	#else
+	mat_plus_mat_tbb(mat1, mat2, out);
+	#endif
+}
 
 /*
     Vector Addition
@@ -376,13 +366,9 @@ void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
     vec2 = [v1, v2, v3, ...]
     return = [u1+v1, u2+v2, u3+v3, ...]
 */
-Vector vec_plus_vec(const Vector& vec1, const Vector& vec2) {
-	Vector ret;
-	vec_plus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
-	return ret;
-}
+
 #if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
-void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
+void vec_plus_vec_avx(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
 	assert((vec1.size() == vec2.size()));
 
@@ -396,27 +382,46 @@ void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 
 	// add elements 8 at a time
 
-	vec_par_for(elem, vec1.size(), 8,
+	vec_main_for(elem, vec1.size()) {
 		const ymm a = vecload(vec1_ptr + elem);
 		const ymm b = vecload(vec2_ptr + elem);
 		const ymm res = vecadd(a, b);
 		vecstore(res_ptr + elem, res);
-	)
+	}
 
 	// deal with residual elements over the multiple of 8
 	vec_res_for(elem, vec1.size()) {
 		res_ptr[elem] = vec1_ptr[elem] + vec2_ptr[elem];
 	}
 }
-#else
-void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
+#endif
+void vec_plus_vec_tbb(Vector& vec1, Vector& vec2, Vector& out) {
 	assert((vec1.size() == vec2.size()));
 	out.resize(vec1.size());
-	for (size_t i = 0; i < vec1.size(); ++i) {
-		out(i) = vec1(i) + vec2(i);
-	}
+	number* out_ptr = out.data();
+	number* vec1_ptr = vec1.data();
+	number* vec2_ptr = vec2.data();
+
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, vec1.size()), [&](tbb::blocked_range<size_t> range){
+		for (size_t i = range.begin(); i < range.end(); ++i) {
+			out_ptr[i] = vec1_ptr[i] + vec2_ptr[i];
+		}
+	});
+	
 }
-#endif
+Vector vec_plus_vec(const Vector& vec1, const Vector& vec2, bool useAVX) {
+	Vector ret;
+	vec_plus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret, useAVX);
+	return ret;
+}
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out, bool useAVX) {
+	#if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
+	if (useAVX) vec_plus_vec_avx(vec1, vec2, out);
+	else vec_plus_vec_tbb(vec1, vec2, out);
+	#else
+	vec_plus_vec_tbb(vec1, vec2, out);
+	#endif
+}
 
 /*
     Vector Subtraction

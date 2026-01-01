@@ -15,6 +15,9 @@ while [[ $# -gt 0 ]]; do
         -z) HIDDEN=$2; shift 2;;
         --threads) THREADS=$2; shift 2;;
         --tasks) TASKS=$2; shift 2;;
+        --grain) GRAIN=$2; shift 2;;
+        --avx) AVX=1; shift 1;;
+        --noavx) AVX=0; shift 1;;
         *) usage;;
     esac
 done
@@ -43,5 +46,14 @@ if ! [ -x build/main/release/main ]; then
 fi
 
 ##### INSERT RUN INSTRUCTIONS BELOW THIS LINE #####
-mpirun -np "$TASKS" build/main/release/main -s "$SEED" -e "$EPOCHS" -l "$LR" -b "$BATCH" -z "$HIDDEN" --threads "$THREADS" --tasks "$TASKS"
+mpirun -np "$TASKS" build/main/release/main\
+ -s "$SEED"\
+ -e "$EPOCHS"\
+ -l "$LR"\
+ -b "$BATCH"\
+ -z "$HIDDEN"\
+ --threads "$THREADS"\
+ --tasks "$TASKS"\
+ --grain "$GRAIN"\
+ ${if [ "${AVX:-1}" -eq 1 ]; then echo "--avx"; else echo "--noavx"; fi}
 ##### INSERT RUN INSTRUCTIONS ABOVE THIS LINE #####

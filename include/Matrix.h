@@ -2,7 +2,7 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
-#include "DataType.h"
+#include "CompileConfig.h"
 
 class Matrix {
     std::vector<number> _data;

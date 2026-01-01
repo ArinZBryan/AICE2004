@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cassert>
 #include <cstddef>
-#include "DataType.h"
+#include "CompileConfig.h"
 #include <algorithm>
 
 class Vector {

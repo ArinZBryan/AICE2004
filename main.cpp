@@ -7,6 +7,7 @@
 #include "DataLoader.h"
 #include "Network.h"
 #include "Train.h"
+#include "CompileConfig.h"
 
 #include <iostream>
 #include <string>
@@ -29,8 +30,14 @@ std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
 		TrainConfig tc = parse_arguments(argc, argv);
 
 		if (tc.tasks > tc.batch_size) {
-			throw std::logic_error("Batch size must be larger than or equal to number of tasks");
+			throw std::runtime_error("Batch size must be larger than or equal to number of tasks");
 		}
+
+		#ifndef USE_MPI
+		if (tc.tasks > 1) {
+			throw std::runtime_error("Tasks > 1 is only supported when compiled with MPI.");
+		}
+		#endif
 
 		unsigned char features = (tc.tasks > 1) << 2 | (tc.threads > 1) << 1 | (tc.batch_size > 1);
 
@@ -57,7 +64,70 @@ std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
 			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED : throw std::logic_error("Use of multi-processing via MPI requires batches > 1"); break;
 			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED  : tm = "Multi-Thread Multi-Process Mini-Batch Gradient Descent"; break;
 		}
-		std::cout << tm << "\n" << std::endl;
+		std::cout << tm << "\n";
+		std::cout << "Maths Function Accelerators:\n";
+		
+		#if defined(USE_AVX_MAT_TIMES_VEC) && defined(__AVX__)
+		std::cout << "\tMatrix/Vector Multiplication: AVX\n";
+		#else
+		std::cout << "\tMatrix/Vector Multiplication: None\n";
+		#endif 
+		#if defined(USE_AVX_MAT_TRANSPOSE_TIMES_VEC) && defined(__AVX__)
+		std::cout << "\tMatrix Transpose Vector Multiplication: AVX\n";
+		#else
+		std::cout << "\tMatrix Transpose Vector Multiplication: None\n";
+		#endif 
+		#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
+		std::cout << "\tMatrix Addition: " << (tc.use_avx ? "AVX" : "TBB") << "\n";
+		#else
+		std::cout << "\tMatrix Addition: None\n";
+		#endif 
+		#if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
+		std::cout << "\tVector Addition: " << (tc.use_avx ? "AVX" : "TBB") << "\n";
+		#else
+		std::cout << "\tVector Addition: None\n";
+		#endif 
+		#if defined(USE_AVX_VEC_MINUS_VEC) && defined(__AVX__)
+		std::cout << "\tVector Subtraction: AVX\n";
+		#else
+		std::cout << "\tVector Subtraction: None\n";
+		#endif 
+		#if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
+		std::cout << "\tVector Elementwise Multiplication: AVX\n";
+		#else
+		std::cout << "\tVector Elementwise Multiplication: None\n";
+		#endif 
+		#if defined(USE_AVX_SIGMOID_VEC) && defined(__AVX__)
+		std::cout << "\tVector Elementwise Sigmoid Function: AVX\n";
+		#else
+		std::cout << "\tVector Elementwise Sigmoid Function: None\n";
+		#endif 
+		#if defined(USE_AVX_SIGMOID_DERIVATIVE) && defined(__AVX__)
+		std::cout << "\tVector Elementwise Sigmoid Derivative Function: AVX\n";
+		#else
+		std::cout << "\tVector Elementwise Sigmoid Derivative Function: None\n";
+		#endif 
+		#if defined(USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE) && defined(__AVX__)
+		std::cout << "\tVector Elementwise Precomputed Sigmoid Sigmoid Derivative Function: AVX\n";
+		#else
+		std::cout << "\tVector Elementwise Precomputed Sigmoid Sigmoid Derivative Function: None\n";
+		#endif 
+		#if defined(USE_AVX_SOFTMAX_VEC) && defined(__AVX__)
+		std::cout << "\tVector Elementwise Softmax Function: AVX\n";
+		#else
+		std::cout << "\tVector Elementwise Softmax Function: None\n";
+		#endif 
+		#if defined(USE_AVX_CROSS_ENTROPY_LOSS) && defined(__AVX__)
+		std::cout << "\tCross-Entropy Loss: AVX\n";
+		#else
+		std::cout << "\tCross-Entropy Loss: None\n";
+		#endif 
+		#if defined(USE_AVX_OUTER_PRODUCT) && defined(__AVX__)
+		std::cout << "\tVector Outer Product: AVX + TBB\n";
+		#else
+		std::cout << "\tVector Outer Product: None\n";
+		#endif 
+		std::cout << "\n";
 		return tc;
 	} catch (const std::logic_error&) {
 		// Help requested
@@ -120,10 +190,13 @@ void saveResults(const Network& net, const std::vector<int>& predictions, const 
 
 int main(int argc, char* argv[]) {
 
+#ifdef USE_MPI
 	MPI_Init(&argc, &argv);
-	int mpi_instance, mpi_instances;
-	MPI_Comm_size(MPI_COMM_WORLD, &mpi_instances);
+	int mpi_instance;
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_instance);
+#else
+	int mpi_instance = 0;
+#endif
 
 	TrainConfig config;
 	int good = 0;
@@ -136,10 +209,14 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	if (good != 0) { 
+		#ifdef USE_MPI
 		MPI_Finalize();
+		#endif
 		return good;
 	} else {
+		#ifdef USE_MPI
 		MPI_Bcast(&config, sizeof(TrainConfig), MPI_BYTE, 0, MPI_COMM_WORLD);
+		#endif
 	}
 
 
@@ -158,11 +235,11 @@ int main(int argc, char* argv[]) {
 		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
 
 		// Print the individual sample & overall accuracy.
-		int untrained_prediction = net.predict(train_data[eval_data_index].pixels);
+		int untrained_prediction = net.predict(train_data[eval_data_index].pixels, config.use_avx);
 		std::string untrained_prediction_string = loader.get_prediction_string(untrained_prediction);
 		std::cout << "[Untrained]" << std::endl;
 		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << untrained_prediction_string << ", the real class is: " << real_class_string << std::endl;
-		std::vector<int> predictions = get_predictions(net, test_data);
+		std::vector<int> predictions = get_predictions(net, test_data, config.use_avx);
 		float accuracy = evaluate_predictions(test_data, predictions);
 		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
 		std::cout << std::endl;
@@ -174,27 +251,31 @@ int main(int argc, char* argv[]) {
 		std::cout << "[Training]" << std::endl;
 	}
 
+	#ifdef USE_MPI
 	MPI_Barrier(MPI_COMM_WORLD);
+	#endif
 	train_model(net, train_data, config, &cross_entropy_losses);
 
 	// Evaluate the trained model only on the main process
 	if (mpi_instance == 0) {
 		// Print the trained prediction of data[eval_data_index].
 		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
-		int trained_prediction = net.predict(train_data[eval_data_index].pixels);
+		int trained_prediction = net.predict(train_data[eval_data_index].pixels, config.use_avx);
 		std::string trained_prediction_string = loader.get_prediction_string(trained_prediction);
 		std::cout << std::endl
 			<< "[Trained]" << std::endl;
 		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << trained_prediction_string << ", the real class is: " << real_class_string << std::endl;
 
 		// Store predictions to save as file later.
-		std::vector<int> predictions = get_predictions(net, test_data);
+		std::vector<int> predictions = get_predictions(net, test_data, config.use_avx);
 		float accuracy = evaluate_predictions(test_data, predictions);
 		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
 
 		saveResults(net, predictions, cross_entropy_losses, config);
 	}
 	
+	#ifdef USE_MPI
 	MPI_Finalize();
+	#endif
 	return 0;
 }

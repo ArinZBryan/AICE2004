@@ -18,15 +18,15 @@ fi
 if [ "$1" == "main" ]; then
     if [ "$2" == "--release" ]; then
         if [ ! -d build/main/release ]; then mkdir build/main/release; fi
-        cmake -S . -B build/main/release -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3";
+        cmake -S . -B build/main/release -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3 -DUSE_MPI";
         cmake --build build/main/release --target main -j12;
     elif [ "$2" == "--debug" ]; then
         if [ ! -d build/main/debug ]; then mkdir build/main/debug; fi
-        cmake -S . -B build/main/debug -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O0 -g -fno-omit-frame-pointer";
+        cmake -S . -B build/main/debug -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O0 -g -fno-omit-frame-pointer -fsanitize=address,undefined";
         cmake --build build/main/debug --target main -j12;
     elif [ "$2" == "--profile" ]; then
         if [ ! -d build/main/profile ]; then mkdir build/main/profile; fi
-        cmake -S . -B build/main/profile -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3 -pg";
+        cmake -S . -B build/main/profile -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3 -pg -DUSE_MPI";
         cmake --build build/main/profile --target main -j12;
     fi
 elif [ "$1" == "test" ]; then
@@ -39,7 +39,7 @@ elif [ "$1" == "compare" ]; then
     cmake --build build/compare --target compare -j12;
 else
     if [ ! -d build/main/release ]; then mkdir build/main/release; fi
-    cmake -S . -B build/main/release -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3";
+    cmake -S . -B build/main/release -DCMAKE_C_COMPILER="mpicc" -DCMAKE_CXX_COMPILER="mpicxx" -DCMAKE_CXX_FLAGS="-Wall -Wextra -O3 -DUSE_MPI";
     cmake --build build/main/release --target main -j12;
 fi
 ##### INSERT BUILD INSTRUCTIONS ABOVE THIS LINE #####
