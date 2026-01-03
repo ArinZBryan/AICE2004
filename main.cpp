@@ -21,11 +21,6 @@
 using namespace std;
 
 std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
-	constexpr char MPI_ENABLED = 0b100;
-	constexpr char TBB_ENABLED = 0b010;
-	constexpr char BATCHING_ENABLED = 0b001;
-	constexpr char MPI_DISABLED = 0, TBB_DISABLED = 0, BATCHING_DISABLED = 0;
-
 	try {
 		TrainConfig tc = parse_arguments(argc, argv);
 
@@ -39,7 +34,14 @@ std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
 		}
 		#endif
 
-		unsigned char features = (tc.tasks > 1) << 2 | (tc.threads > 1) << 1 | (tc.batch_size > 1);
+		bool feature_MPI = (tc.tasks > 1);
+		bool feature_TBB = (tc.threads > 1);
+		bool feature_Batch = (tc.batch_size > 1);
+		#ifdef __AVX__
+		bool feature_AVX = true;
+		#else
+		bool feature_AVX = false;
+		#endif
 
 		oneapi::tbb::global_control tbb_global_ctrl(oneapi::tbb::global_control::max_allowed_parallelism, tc.threads);
 
@@ -51,83 +53,11 @@ std::variant<TrainConfig, int> configure(int argc, char* argv[]) {
 		std::cout << "Hidden Layer Size:\t" << tc.hidden_size << "\n";
 		std::cout << "Threads:\t\t" << tc.threads << "\n";
 		std::cout << "Tasks:\t\t\t" << tc.tasks << "\n";
-		std::cout << "Training Method:\t";
-		std::string tm;
-		switch (features)
-		{
-			case MPI_DISABLED | TBB_DISABLED | BATCHING_DISABLED : tm = "Stochastic Gradient Descent"; break;
-			case MPI_DISABLED | TBB_DISABLED | BATCHING_ENABLED  : tm = "Mini-Batch Gradient Descent"; break;
-			case MPI_DISABLED | TBB_ENABLED  | BATCHING_DISABLED : tm = "Stochastic Gradient Descent"; break;
-			case MPI_DISABLED | TBB_ENABLED  | BATCHING_ENABLED  : tm = "Multi-Thread Mini-Batch Gradient Descent"; break;
-			case MPI_ENABLED  | TBB_DISABLED | BATCHING_DISABLED : throw std::logic_error("Use of multi-processing via MPI requires batches > 1"); break;
-			case MPI_ENABLED  | TBB_DISABLED | BATCHING_ENABLED  : tm = "Multi-Process Mini-Batch Gradient Descent"; break;
-			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_DISABLED : throw std::logic_error("Use of multi-processing via MPI requires batches > 1"); break;
-			case MPI_ENABLED  | TBB_ENABLED  | BATCHING_ENABLED  : tm = "Multi-Thread Multi-Process Mini-Batch Gradient Descent"; break;
-		}
-		std::cout << tm << "\n";
-		std::cout << "Maths Function Accelerators:\n";
-		
-		#if defined(USE_AVX_MAT_TIMES_VEC) && defined(__AVX__)
-		std::cout << "\tMatrix/Vector Multiplication: AVX\n";
-		#else
-		std::cout << "\tMatrix/Vector Multiplication: None\n";
-		#endif 
-		#if defined(USE_AVX_MAT_TRANSPOSE_TIMES_VEC) && defined(__AVX__)
-		std::cout << "\tMatrix Transpose Vector Multiplication: AVX\n";
-		#else
-		std::cout << "\tMatrix Transpose Vector Multiplication: None\n";
-		#endif 
-		#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
-		std::cout << "\tMatrix Addition: " << (tc.use_avx ? "AVX" : "TBB") << "\n";
-		#else
-		std::cout << "\tMatrix Addition: None\n";
-		#endif 
-		#if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
-		std::cout << "\tVector Addition: " << (tc.use_avx ? "AVX" : "TBB") << "\n";
-		#else
-		std::cout << "\tVector Addition: None\n";
-		#endif 
-		#if defined(USE_AVX_VEC_MINUS_VEC) && defined(__AVX__)
-		std::cout << "\tVector Subtraction: AVX\n";
-		#else
-		std::cout << "\tVector Subtraction: None\n";
-		#endif 
-		#if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
-		std::cout << "\tVector Elementwise Multiplication: AVX\n";
-		#else
-		std::cout << "\tVector Elementwise Multiplication: None\n";
-		#endif 
-		#if defined(USE_AVX_SIGMOID_VEC) && defined(__AVX__)
-		std::cout << "\tVector Elementwise Sigmoid Function: AVX\n";
-		#else
-		std::cout << "\tVector Elementwise Sigmoid Function: None\n";
-		#endif 
-		#if defined(USE_AVX_SIGMOID_DERIVATIVE) && defined(__AVX__)
-		std::cout << "\tVector Elementwise Sigmoid Derivative Function: AVX\n";
-		#else
-		std::cout << "\tVector Elementwise Sigmoid Derivative Function: None\n";
-		#endif 
-		#if defined(USE_AVX_PRECOMPUTED_SIGMOID_DERIVATIVE) && defined(__AVX__)
-		std::cout << "\tVector Elementwise Precomputed Sigmoid Sigmoid Derivative Function: AVX\n";
-		#else
-		std::cout << "\tVector Elementwise Precomputed Sigmoid Sigmoid Derivative Function: None\n";
-		#endif 
-		#if defined(USE_AVX_SOFTMAX_VEC) && defined(__AVX__)
-		std::cout << "\tVector Elementwise Softmax Function: AVX\n";
-		#else
-		std::cout << "\tVector Elementwise Softmax Function: None\n";
-		#endif 
-		#if defined(USE_AVX_CROSS_ENTROPY_LOSS) && defined(__AVX__)
-		std::cout << "\tCross-Entropy Loss: AVX\n";
-		#else
-		std::cout << "\tCross-Entropy Loss: None\n";
-		#endif 
-		#if defined(USE_AVX_OUTER_PRODUCT) && defined(__AVX__)
-		std::cout << "\tVector Outer Product: AVX + TBB\n";
-		#else
-		std::cout << "\tVector Outer Product: None\n";
-		#endif 
-		std::cout << "\n";
+		std::cout << "Features Enabled:\t" << (feature_AVX ? "AVX " : "");
+		std::cout							<< (feature_TBB ? "TBB " : "");
+		std::cout 							<< (feature_MPI ? "MPI " : "");
+		std::cout							<< (feature_Batch ? "Batching" : "");
+		std::cout << "\n\n";
 		return tc;
 	} catch (const std::logic_error&) {
 		// Help requested
@@ -235,11 +165,11 @@ int main(int argc, char* argv[]) {
 		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
 
 		// Print the individual sample & overall accuracy.
-		int untrained_prediction = net.predict(train_data[eval_data_index].pixels, config.use_avx);
+		int untrained_prediction = net.predict(train_data[eval_data_index].pixels);
 		std::string untrained_prediction_string = loader.get_prediction_string(untrained_prediction);
 		std::cout << "[Untrained]" << std::endl;
 		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << untrained_prediction_string << ", the real class is: " << real_class_string << std::endl;
-		std::vector<int> predictions = get_predictions(net, test_data, config.use_avx);
+		std::vector<int> predictions = get_predictions(net, test_data);
 		float accuracy = evaluate_predictions(test_data, predictions);
 		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
 		std::cout << std::endl;
@@ -260,14 +190,14 @@ int main(int argc, char* argv[]) {
 	if (mpi_instance == 0) {
 		// Print the trained prediction of data[eval_data_index].
 		std::string real_class_string = loader.get_prediction_string(train_data[eval_data_index].label);
-		int trained_prediction = net.predict(train_data[eval_data_index].pixels, config.use_avx);
+		int trained_prediction = net.predict(train_data[eval_data_index].pixels);
 		std::string trained_prediction_string = loader.get_prediction_string(trained_prediction);
 		std::cout << std::endl
 			<< "[Trained]" << std::endl;
 		std::cout << "Network predicted the class of test data sample " << eval_data_index << " is " << trained_prediction_string << ", the real class is: " << real_class_string << std::endl;
 
 		// Store predictions to save as file later.
-		std::vector<int> predictions = get_predictions(net, test_data, config.use_avx);
+		std::vector<int> predictions = get_predictions(net, test_data);
 		float accuracy = evaluate_predictions(test_data, predictions);
 		std::cout << "Evaluation Accuracy: " << accuracy * 100.0f << "%" << std::endl;
 

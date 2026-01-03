@@ -21,8 +21,8 @@ class Network {
 	~Network();
 
 	// Inference
-	int predict(const Vector& input, bool useAVX);
-	int predict(const std::vector<float>& input, bool useAVX);
+	int predict(const Vector& input);
+	int predict(const std::vector<float>& input);
 
 	// Training
 	struct TrainResult {
@@ -32,8 +32,8 @@ class Network {
 		Vector bias2_grad;
 		Vector cse_delta;
 	};
-	Vector forward(const Vector& input, bool useAVX);
-	static void train(const Vector& input, const Vector& target, const Matrix* weight0, const Matrix* weight1, const Vector* bias0, const Vector* bias1, bool useAVX, TrainResult& out);
+	Vector forward(const Vector& input);
+	static void train(const Vector& input, const Vector& target, const Matrix* weight0, const Matrix* weight1, const Vector* bias0, const Vector* bias1, TrainResult& out);
 	void update(float learning_rate, const TrainResult& result);
 
 	// Getters

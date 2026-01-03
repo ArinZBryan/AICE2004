@@ -9,11 +9,11 @@ Vector mat_times_vec(const Matrix &mat, const Vector &vec);
 void mat_times_vec(const Matrix& mat, const Vector& vec, Vector& out);
 Vector mat_transpose_times_vec(const Matrix& mat, const Vector &vec);
 void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out);
-Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2, bool useAVX);
-void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out, bool useAVX);
+Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2);
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out);
 
-Vector vec_plus_vec(const Vector &vec1, const Vector &vec2, bool useAVX);
-void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out, bool useAVX);
+Vector vec_plus_vec(const Vector &vec1, const Vector &vec2);
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out);
 Vector vec_minus_vec(const Vector &vec1, const Vector &vec2);
 void vec_minus_vec(Vector& vec1, Vector& vec2, Vector& out);
 Vector multiply_elementwise_vec(const Vector &vec1, const Vector &vec2);

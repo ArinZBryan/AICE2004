@@ -31,8 +31,6 @@ done
 : "${THREADS:?Missing --threads}"
 : "${TASKS:?Missing --tasks}"
 
-
-
 # Check that we are in correct directory
 if ! [ -f "CMakeLists.txt" ] || ! grep -q "project(aice-fashion-network)" CMakeLists.txt; then
     echo "error: in the wrong directory. Please go to root of project and run: scripts/run.sh"
@@ -53,7 +51,5 @@ mpirun -np "$TASKS" build/main/release/main\
  -b "$BATCH"\
  -z "$HIDDEN"\
  --threads "$THREADS"\
- --tasks "$TASKS"\
- --grain "$GRAIN"\
- ${if [ "${AVX:-1}" -eq 1 ]; then echo "--avx"; else echo "--noavx"; fi}
+ --tasks "$TASKS"
 ##### INSERT RUN INSTRUCTIONS ABOVE THIS LINE #####

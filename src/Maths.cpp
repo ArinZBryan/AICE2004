@@ -73,7 +73,7 @@ extern "C" __m256d _ZGVdN4v_exp(__m256d x);
 #define vechadd(x) mm256_hadd_ps_fast(x)
 #define vecmax(x) mm256_max_ps_vector(x)
 #define vecfit(x) (((x) / 8) * 8)
-#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)
+#define vec_main_for(itvar, maxval) for (size_t itvar = 0; (itvar) < (((maxval) / 8) * 8); (itvar) += 8)	
 #define vec_res_for(itvar, maxval) for (size_t itvar = (((maxval) / 8) * 8); (itvar) < (maxval); itvar++)
 #define ymm __m256
 #endif
@@ -210,7 +210,7 @@ void mat_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
 	out.resize(mat.rows());
 
 	for (size_t row = 0; row < mat.rows(); row++) {
-		// zero out the accumulators
+	// zero out the accumulators
 		ymm acc0 = vecsetzero();
 
 		vec_main_for(col, mat.cols()) {
@@ -267,6 +267,7 @@ Vector mat_transpose_times_vec(const Matrix& mat, const Vector& vec) {
 #if defined(USE_AVX_MAT_TRANSPOSE_TIMES_VEC) && defined(__AVX__)
 void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
 	assert((mat.rows() == vec.size()));
+	constexpr size_t blocksize = 16;
 	out.resize(mat.cols());
 
 	number* result_ptr = out.data();
@@ -275,20 +276,28 @@ void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) 
 
 	size_t rows = mat.rows();
 	size_t cols = mat.cols();
+	size_t colblocks = std::ceilf(static_cast<float>(cols) / static_cast<float>(blocksize));
 
-	for (size_t row = 0; row < rows; ++row) {
-		const ymm vec_elem = vecsetvalue(vec_ptr[row]);
+		for (size_t colblock = 0; colblock < colblocks; ++colblock) {
+			size_t block_start = colblock * blocksize;
+			size_t block_end = std::min(block_start + blocksize, cols);
+			
+			for (size_t row = 0; row < rows; ++row) {
+				const ymm vec_elem = vecsetvalue(vec_ptr[row]);
 
-		vec_main_for(col, cols) {
-			const ymm result_8 = vecload(result_ptr + col);
-			const ymm mat_8 = vecload(mat_ptr + row * cols + col);
-			const ymm res_8 = vecfmadd(vec_elem, mat_8, result_8);
-			vecstore(result_ptr + col, res_8);
+				vec_main_for(block_col, block_end - block_start) {
+					size_t col = block_start + block_col;
+					const ymm result_8 = vecload(result_ptr + col);
+					const ymm mat_8 = vecload(mat_ptr + row * cols + col);
+					const ymm res_8 = vecfmadd(vec_elem, mat_8, result_8);
+					vecstore(result_ptr + col, res_8);
+				}
+				vec_res_for(block_col, block_end - block_start) {
+					size_t col = block_start + block_col;
+					out(col) += mat(row, col) * vec_ptr[row];
+				}
+			}
 		}
-		vec_res_for(col, cols) {
-			out(col) += mat(row, col) * vec_ptr[row];
-		}
-	}
 }
 #else
 void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) {
@@ -306,8 +315,16 @@ void mat_transpose_times_vec(const Matrix& mat, const Vector& vec, Vector& out) 
 }
 #endif
 
+/*
+    Matrix Addition
+*/
+Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2) {
+	Matrix ret(mat1.rows(), mat1.cols());
+	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret);
+	return ret;
+}
 #if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
-void mat_plus_mat_avx(Matrix& mat1, Matrix& mat2, Matrix& out) {
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	// assert vectors are of same size
 	assert((mat1.size() == mat2.size() && mat1.size() == out.size()));
 
@@ -327,33 +344,20 @@ void mat_plus_mat_avx(Matrix& mat1, Matrix& mat2, Matrix& out) {
 		res_ptr[elem] = mat1_ptr[elem] + mat2_ptr[elem];
 	}
 }
-#endif
-void mat_plus_mat_tbb(Matrix& mat1, Matrix& mat2, Matrix& out) {
+#else
+void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out) {
 	assert((mat1.rows() == mat2.rows() && mat1.cols() == mat2.cols() && out.rows() == mat1.rows() && out.cols() == mat1.cols()));
 	size_t elems = mat1.rows() * mat1.cols();
 	number* mat1_data = mat1.data();
 	number* mat2_data = mat2.data();
 	number* out_data = out.data();
 
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, elems), [&](tbb::blocked_range<size_t> range){
-		for (size_t i = range.begin(); i < range.end(); ++i) {
-			out_data[i] = mat1_data[i] + mat2_data[i];
-		}
-	});
+	for (size_t i = 0; i < mat1.size(); ++i) {
+		out_data[i] = mat1_data[i] + mat2_data[i];
+	}
 }
-Matrix mat_plus_mat(const Matrix& mat1, const Matrix& mat2, bool useAVX) {
-	Matrix ret(mat1.rows(), mat1.cols());
-	mat_plus_mat(const_cast<Matrix&>(mat1), const_cast<Matrix&>(mat2), ret, useAVX);
-	return ret;
-}
-void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out, bool useAVX) {
-	#if defined(USE_AVX_MAT_PLUS_MAT) && defined(__AVX__)
-	if (useAVX) mat_plus_mat_avx(mat1, mat2, out);
-	else mat_plus_mat_avx(mat1, mat2, out);
-	#else
-	mat_plus_mat_tbb(mat1, mat2, out);
-	#endif
-}
+#endif
+
 
 /*
     Vector Addition
@@ -362,9 +366,13 @@ void mat_plus_mat(Matrix& mat1, Matrix& mat2, Matrix& out, bool useAVX) {
     vec2 = [v1, v2, v3, ...]
     return = [u1+v1, u2+v2, u3+v3, ...]
 */
-
+Vector vec_plus_vec(const Vector& vec1, const Vector& vec2) {
+	Vector ret;
+	vec_plus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
+	return ret;
+}
 #if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
-void vec_plus_vec_avx(Vector& vec1, Vector& vec2, Vector& out) {
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	// assert vectors are of same size
 	assert((vec1.size() == vec2.size()));
 
@@ -390,34 +398,21 @@ void vec_plus_vec_avx(Vector& vec1, Vector& vec2, Vector& out) {
 		res_ptr[elem] = vec1_ptr[elem] + vec2_ptr[elem];
 	}
 }
-#endif
-void vec_plus_vec_tbb(Vector& vec1, Vector& vec2, Vector& out) {
+#else
+void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	assert((vec1.size() == vec2.size()));
 	out.resize(vec1.size());
 	number* out_ptr = out.data();
 	number* vec1_ptr = vec1.data();
 	number* vec2_ptr = vec2.data();
 
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, vec1.size()), [&](tbb::blocked_range<size_t> range){
-		for (size_t i = range.begin(); i < range.end(); ++i) {
-			out_ptr[i] = vec1_ptr[i] + vec2_ptr[i];
-		}
-	});
+	for (size_t i = 0; i < vec1.size(); ++i) {
+		out_ptr[i] = vec1_ptr[i] + vec2_ptr[i];
+	}
+
 	
 }
-Vector vec_plus_vec(const Vector& vec1, const Vector& vec2, bool useAVX) {
-	Vector ret;
-	vec_plus_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret, useAVX);
-	return ret;
-}
-void vec_plus_vec(Vector& vec1, Vector& vec2, Vector& out, bool useAVX) {
-	#if defined(USE_AVX_VEC_PLUS_VEC) && defined(__AVX__)
-	if (useAVX) vec_plus_vec_avx(vec1, vec2, out);
-	else vec_plus_vec_tbb(vec1, vec2, out);
-	#else
-	vec_plus_vec_tbb(vec1, vec2, out);
-	#endif
-}
+#endif
 
 /*
     Vector Subtraction
@@ -527,7 +522,7 @@ Vector divide_elementwise_vec(const Vector& vec1, const Vector& vec2) {
 	divide_elementwise_vec(const_cast<Vector&>(vec1), const_cast<Vector&>(vec2), ret);
 	return ret;
 }
-#if defined(USE_AVX_MULTIPLY_ELEMENTWISE_VEC) && defined(__AVX__)
+#if defined(USE_AVX_DIVIDE_ELEMENTWISE_VEC) && defined(__AVX__)
 void divide_elementwise_vec(Vector& vec1, Vector& vec2, Vector& out) {
 	assert((vec1.size() == vec2.size()));
 
